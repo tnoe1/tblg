@@ -1,0 +1,2 @@
+- [ ] Design schema
+- [ ] Fix db docker compose and get postgres database set up with entrypoint.sql

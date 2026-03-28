@@ -1,0 +1,27 @@
+{
+  "name": "tblg",
+  "version": "1.0.0",
+  "description": "blogging platform",
+  "keywords": [
+    "blog"
+  ],
+  "homepage": "https://github.com/tnoe1/tblg#readme",
+  "bugs": {
+    "url": "https://github.com/tnoe1/tblg/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tnoe1/tblg.git"
+  },
+  "license": "ISC",
+  "author": "tnoe1.dev@gmail.com",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "pg": "^8.20.0"
+  }
+}
