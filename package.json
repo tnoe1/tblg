@@ -1,7 +1,7 @@
 {
   "name": "tblg",
   "version": "1.0.0",
-  "description": "blogging platform",
+  "description": "thomas's blog",
   "keywords": [
     "blog"
   ],
@@ -21,7 +21,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "dotenv": "^17.3.1",
-    "pg": "^8.20.0"
+    "better-sqlite3": "^12.8.0",
+    "dotenv": "^17.3.1"
   }
 }

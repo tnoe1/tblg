@@ -9,6 +9,7 @@ const env = require('./env.js');
 
 const run = async () => {
     const pool = await new Pool({
+        host: env.db.host
     });
     const query = (text, params) => pool.query(text, params);
 
