@@ -8,6 +8,10 @@ tblg is a personal blogging platform.
 
 ## Features
 
+- Easy migrations
+- Lightweight sqlite db using `better-sqlite3`
+
+Will have
 - Create and publish blog posts
 - View a list of all posts
 - Read individual posts

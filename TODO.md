@@ -1,2 +1,3 @@
-- [ ] Design schema
-- [ ] Fix db docker compose and get postgres database set up with entrypoint.sql
+- [ ] Stub out system design and vision
+- [ ] Design schema (posts first)
+- [ ] Finish modular db subsystem encapsulation
