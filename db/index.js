@@ -1,6 +1,8 @@
 const Database = require('better-sqlite3');
 const fs = require("node:fs");
 const { join } = require("node:path");
+const PostInterface = require("./posts");
+const CommentInterface = require("./posts");
 
 const DB_PATH = 'data/tblg.db';
 const MIGRATIONS_PATH = 'migrations';
@@ -121,4 +123,7 @@ if (!db_preexistent) {
     logger(`tblg is up-to-date and using the newest db version: v${latest_version}`);
 }
 
-module.exports = db;
+module.exports = {
+    posts: new PostInterface(db),
+    comments: new CommentInterface(db)
+};
