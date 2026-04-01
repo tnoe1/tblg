@@ -14,4 +14,4 @@ class CommentInterface {
     // TODO
 }
 
-module.exports = { CommentInterface };
+module.exports = CommentInterface;

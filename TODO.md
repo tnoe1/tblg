@@ -1,4 +1,4 @@
 - [ ] Stub out system design and vision
+    - [ ] Finish designing data model
     - [ ] Decide if everything is a post or not (e.g. "about" and "contact")
-- [ ] Design schema (posts first)
 - [ ] Finish modular db subsystem encapsulation
