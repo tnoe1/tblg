@@ -2,7 +2,7 @@ const Database = require('better-sqlite3');
 const fs = require("node:fs");
 const { join } = require("node:path");
 const PostInterface = require("./posts");
-const CommentInterface = require("./posts");
+const CommentInterface = require("./comments");
 
 const DB_PATH = 'data/tblg.db';
 const MIGRATIONS_PATH = 'migrations';
@@ -127,3 +127,4 @@ module.exports = {
     posts: new PostInterface(db),
     comments: new CommentInterface(db)
 };
+

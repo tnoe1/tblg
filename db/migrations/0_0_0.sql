@@ -30,10 +30,7 @@ CREATE TABLE posts (
     content TEXT NOT NULL,
     parent INTEGER REFERENCES posts(id) -- self-referential... oooh. 
 );
--- TODO: Indices
 
-
--- post_categories reference posts.
 CREATE TABLE post_categories (
     id INTEGER PRIMARY KEY,
     post_id INTEGER REFERENCES posts(id),
@@ -41,6 +38,25 @@ CREATE TABLE post_categories (
     UNIQUE(post_id, category)
 );
 
--- Users table: name, email, url, comment_count, (sentiment?); unique on (name, email, url)
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT,
+    url TEXT,
+    comment_count INTEGER,
+    UNIQUE(name, email, url)
+);
+CREATE INDEX idx_users_name ON users(name);
+CREATE INDEX idx_users_comment_count ON users(comment_count);
 
--- Comments table (references users, and posts): post_id (on delete cascade), user, comment
+-- Comments table (references users, and posts): ts, post_id (on delete cascade), user, comment
+CREATE TABLE comments (
+    id INTEGER PRIMARY KEY,
+    ts_unix_sec INTEGER NOT NULL,
+    ts_readable TEXT GENERATED ALWAYS AS (
+        STRFTIME('%Y-%m-%dT%H:%M:%SZ', ts_unix_sec, 'unixepoch')
+    ) VIRTUAL,
+    user_id INTEGER REFERENCES users(id),
+    comment TEXT NOT NULL
+);
+CREATE INDEX idx_comments_user_id ON users(name);

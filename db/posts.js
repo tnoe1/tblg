@@ -15,4 +15,4 @@ class PostInterface {
     // TODO
 }
 
-module.exports = { PostInterface };
+module.exports = PostInterface;
