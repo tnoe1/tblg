@@ -28,6 +28,10 @@ CREATE TABLE posts (
     ) VIRTUAL,
     author TEXT NOT NULL,
     content TEXT NOT NULL,
+    last_updated_unix_sec INTEGER NOT NULL,
+    last_updated_readable TEXT GENERATED ALWAYS AS (
+        STRFTIME('%Y-%m-%dT%H:%M:%SZ', last_updated_unix_sec, 'unixepoch')
+    ) VIRTUAL,
     parent INTEGER REFERENCES posts(id) -- self-referential... oooh. 
 );
 

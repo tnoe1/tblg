@@ -1,4 +1,5 @@
 - [ ] Stub out system design and vision
-    - [ ] Finish designing data model
+    - [x] Finish designing data model
+    - [ ] Finish writing posts.js and comments.js
     - [ ] Decide if everything is a post or not (e.g. "about" and "contact")
 - [ ] Finish modular db subsystem encapsulation

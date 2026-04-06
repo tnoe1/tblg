@@ -4,8 +4,8 @@ const { join } = require("node:path");
 const PostInterface = require("./posts");
 const CommentInterface = require("./comments");
 
-const DB_PATH = 'data/tblg.db';
-const MIGRATIONS_PATH = 'migrations';
+const DB_PATH = join(__dirname, 'data/tblg.db');
+const MIGRATIONS_PATH = join(__dirname, 'migrations');
 
 class MigrationError extends Error {
     constructor(message, version, db_error) {
@@ -19,8 +19,16 @@ class MigrationError extends Error {
 /**
  * Logging wrapper for db.
  */
-const logger = (s) => {
-    console.log('\x1b[38;5;46m[tblgdb] \x1b[0m\x1b[38;5;51m%s\x1b[0m', s);
+const logger = {
+    info: (s) => {
+        console.log('\x1b[38;5;46m[tblgdb] \x1b[0m\x1b[38;5;51m%s\x1b[0m', s);
+    },
+    warn: (s) => {
+        console.log('\x1b[38;5;46m[tblgdb] \x1b[0m\x1b[0;49;93m%s\x1b[0m', s);
+    },
+    error: (s) => {
+        console.log('\x1b[38;5;46m[tblgdb] \x1b[0m\x1b[0;49;91m%s\x1b[0m', s);
+    }
 };
 
 /**
@@ -81,16 +89,16 @@ db.pragma('journal_mode = WAL'); // Recommended for performance
 
 const migrations = get_sorted_migrations();
 if (!db_preexistent) {
-    logger("tblg database doesn't exist. Initializing now...");
+    logger.info("tblg database doesn't exist. Initializing now...");
 
     // Initialize from migrations
     for (const m of migrations) {
-        logger(`applying v${m.split('.')[0]} changes`);
+        logger.info(`applying v${m.split('.')[0]} changes`);
         run_migration(db, m);
     }
-    logger("Migrations successfully applied. Database initialized.");
+    logger.info("Migrations successfully applied. Database initialized.");
 } else {
-    logger("tblg database already exists. Making sure it's up to date...");
+    logger.info("tblg database already exists. Making sure it's up to date...");
 
     // Check if migrated. If version correct, then nothing to apply. 
     const latest_version = migrations.slice(-1)[0].split('.')[0];
@@ -110,21 +118,21 @@ if (!db_preexistent) {
 
     // Otherwise apply new migrations.
     if (!migrated) {
-        logger(`db is on v${db_version}, need to migrate to v${latest_version}`);
+        logger.info(`db is on v${db_version}, need to migrate to v${latest_version}`);
 
         let idx = migrations.indexOf(db_version.concat('.sql')) + 1;
         while (idx < migrations.length) {
-            logger(`applying v${migrations[idx].split('.')[0]} migration`);
+            logger.info(`applying v${migrations[idx].split('.')[0]} migration`);
             run_migration(db, migrations[idx]);
             idx++;
         }
     }
 
-    logger(`tblg is up-to-date and using the newest db version: v${latest_version}`);
+    logger.info(`tblg is up-to-date and using the newest db version: v${latest_version}`);
 }
 
 module.exports = {
-    posts: new PostInterface(db),
-    comments: new CommentInterface(db)
+    posts: new PostInterface(db, logger),
+    comments: new CommentInterface(db, logger)
 };
 

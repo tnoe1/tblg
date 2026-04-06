@@ -4,16 +4,23 @@
  *     ii) The application server
  */
 
-const { Pool } = require('pg');
 const env = require('./env.js');
+const db = require('./db');
 
 const run = async () => {
-    const pool = await new Pool({
-        host: env.db.host
+    // TEST 'ER OUT
+    const init_post_data = db.posts.create_post({
+        author: "Thomas Noel",
+        content: "I love Susannah!!!",
+        categories: ["Love", "Family"]
     });
-    const query = (text, params) => pool.query(text, params);
 
-
+    const next_post_data = db.posts.create_post({
+        author: "Thomas Noel",
+        content: "I love Ivan too!!!",
+        parent_id: init_post_data.data.id,
+        categories: ["Love", "Family"]
+    });
 };
 
 const shutdown = (signal) => {
