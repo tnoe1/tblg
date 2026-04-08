@@ -74,7 +74,8 @@ class PostInterface {
         }
 
         const stmt = this.#db.prepare(`
-            INSERT INTO posts (${cols}) VALUES (${('?, '.repeat(args.length)).slice(0, -2)})
+            INSERT INTO posts (${cols}) 
+                VALUES (${('?, '.repeat(args.length)).slice(0, -2)})
         `);
 
         const info = stmt.run(args);
@@ -94,11 +95,13 @@ class PostInterface {
 
             if (categories) this.associate_categories(post_id, categories);
 
-            data = this.get_post_by_id(post_id);
+            data = this.get_post_by_id(post_id).data;
 
             if (!!data) {
                 data.categories = categories;
-                this.logger.info(`New post with id ${post_id} successfully added to database`);
+                this.logger.info(
+                    `New post with id ${post_id} successfully added to database`
+                );
             } else {
                 this.logger.error(`Couldn't find id associated with post`);
             }
@@ -117,33 +120,117 @@ class PostInterface {
      */
     get_post_by_id(id) {
         const stmt = this.#db.prepare(`SELECT * FROM posts WHERE id = ?`);
-        return stmt.get(id);
+        const data = stmt.get(id);
+
+        let message = `Successfully retrieved post with id ${id}`;
+        let success = true;
+        if (data === undefined) {
+            message = `Couldn't find a post with id ${id}`;
+        }
+
+        return { success, data, message };
     }
 
 
     get_posts_by_author(author) {
         const stmt = this.#db.prepare(`SELECT * FROM posts WHERE author = ?`);
-        return stmt.all(author);
+        const data = stmt.all(author);
+
+        let message = `Successfully retrieved ${data.length} posts with ` +
+            `author ${author}`;
+        let success = true;
+        if (data.length === 0) {
+            message = `Couldn't find any posts with author ${author}`;
+        }
+
+        return { success, data, message };
     }
 
-    get_posts_after(ts_unix_sec) {
-        const stmt = this.#db.prepare(`SELECT * FROM posts WHERE ts_unix_sec > ?`);
-        return stmt.all(ts_unix_sec);
+    get_posts_created_after(ts_unix_sec) {
+        const stmt = this.#db.prepare(
+            `SELECT * FROM posts WHERE ts_unix_sec > ? ORDER BY ts_unix_sec ASC`
+        );
+        const data = stmt.all(ts_unix_sec);
+
+        let message = `Successfully retrieved ${data.length} posts with ` +
+            `creation timestamps exceeding ${ts_unix_sec}`;
+        let success = true;
+        if (data.length === 0) {
+            message = "Couldn't find any posts with creation timestamp " +
+                `exceeding ${ts_unix_sec}`;
+        }
+
+        return { success, data, message };
     }
 
-    get_posts_before(ts_unix_sec) {
-        const stmt = this.#db.prepare(`SELECT * FROM posts WHERE ts_unix_sec < ?`);
-        return stmt.all(ts_unix_sec);
+    get_posts_created_before(ts_unix_sec) {
+        const stmt = this.#db.prepare(
+            `SELECT * FROM posts WHERE ts_unix_sec < ?`
+        );
+        const data = stmt.all(ts_unix_sec);
+
+        let message = `Successfully retrieved ${data.length} posts with ` +
+            `creation timestamps less than ${ts_unix_sec}`;
+        let success = true;
+        if (data.length === 0) {
+            message = "Couldn't find any posts with creation timestamp " +
+                `less than ${ts_unix_sec}`;
+        }
+
+        return { success, data, message };
     }
 
-    // TODO: TESTME
+    get_posts_last_updated_after(last_updated_unix_sec) {
+        const stmt = this.#db.prepare(`
+            SELECT * FROM posts WHERE last_updated_unix_sec > ? 
+                ORDER BY last_updated_unix_sec ASC
+        `);
+        const data = stmt.all(last_updated_unix_sec);
+
+        let message = `Successfully retrieved ${data.length} posts with ` +
+            `last updated timestamps exceeding ${last_updated_unix_sec}`;
+        let success = true;
+        if (data.length === 0) {
+            message = "Couldn't find any posts with last updated timestamp " +
+                `exceeding ${last_updated_unix_sec}`;
+        }
+
+        return { success, data, message };
+    }
+
+    get_posts_last_updated_before(last_updated_unix_sec) {
+        const stmt = this.#db.prepare(
+            `SELECT * FROM posts WHERE last_updated_unix_sec < ?`
+        );
+        const data = stmt.all(last_updated_unix_sec);
+
+        let message = `Successfully retrieved ${data.length} posts with ` +
+            `last updated timestamps less than ${last_updated_unix_sec}`;
+        let success = true;
+        if (data.length === 0) {
+            message = "Couldn't find any posts with creation timestamp " +
+                `less than ${last_updated_unix_sec}`;
+        }
+
+        return { success, data, message };
+    }
+
     get_posts_of_category(category) {
         const stmt = this.#db.prepare(
             `SELECT * FROM posts as p 
                 LEFT JOIN post_categories as pc ON p.id = pc.post_id 
                 WHERE pc.category = ?`
         );
-        return stmt.all(category);
+        const data = stmt.all(category);
+
+        let message = `Successfully retrieved ${data.length} posts with ` +
+            `category ${category}`;
+        let success = true;
+        if (data.length === 0) {
+            message = `Couldn't find any posts with category ${category}`;
+        }
+
+        return { success, data, message };
     }
 
     get_parent_of(id) {}

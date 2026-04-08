@@ -8,18 +8,23 @@ const env = require('./env.js');
 const db = require('./db');
 
 const run = async () => {
-    // TEST 'ER OUT
-    const init_post_data = db.posts.create_post({
-        author: "Thomas Noel",
-        content: "I love Susannah!!!",
-        categories: ["Love", "Family"]
-    });
+    // const init_post_data = db.posts.create_post({
+    //     author: "Thomas Noel",
+    //     content: "I love Susannah!!!",
+    //     categories: ["Love", "Family"]
+    // });
+
+    // const next_post_data = db.posts.create_post({
+    //     author: "Thomas Noel",
+    //     content: "I love Ivan too!!!",
+    //     parent_id: init_post_data.data.id,
+    //     categories: ["Love", "Family"]
+    // });
 
     const next_post_data = db.posts.create_post({
         author: "Thomas Noel",
-        content: "I love Ivan too!!!",
-        parent_id: init_post_data.data.id,
-        categories: ["Love", "Family"]
+        content: "<p>Lance the Turtle, Aloha Lance!</p>",
+        categories: ["VeggieTales", "Funny", "IvanFav"]
     });
 };
 

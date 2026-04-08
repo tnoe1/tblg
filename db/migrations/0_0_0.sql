@@ -53,7 +53,8 @@ CREATE TABLE users (
 CREATE INDEX idx_users_name ON users(name);
 CREATE INDEX idx_users_comment_count ON users(comment_count);
 
--- Comments table (references users, and posts): ts, post_id (on delete cascade), user, comment
+-- Comments table (references users, and posts): ts, 
+-- post_id (on delete cascade), user, comment
 CREATE TABLE comments (
     id INTEGER PRIMARY KEY,
     ts_unix_sec INTEGER NOT NULL,

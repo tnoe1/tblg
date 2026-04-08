@@ -1,5 +1,8 @@
 - [ ] Stub out system design and vision
     - [x] Finish designing data model
-    - [ ] Finish writing posts.js and comments.js
+    - [ ] Finish writing posts.js
+    - [ ] Finish testing posts.js & make sure WAL isn't causing issues
+    - [ ] Finish writing comments.js
+    - [ ] Finish testing comments.js 
     - [ ] Decide if everything is a post or not (e.g. "about" and "contact")
 - [ ] Finish modular db subsystem encapsulation
