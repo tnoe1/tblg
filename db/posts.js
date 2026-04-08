@@ -44,7 +44,21 @@ class PostInterface {
         }
     }
 
+    /**
+     * Create a post.
+     */
     create_post({ author, content, parent_id, categories } = {}) {
+        let message;
+        if (!author || !content) {
+            message = `Failed to create post: must specify author and content`;
+            this.logger.error(message);
+            return {
+                success: false,
+                data: {},
+                message: message
+            };
+        }
+
         this.logger.info(`Adding new post to database`);
 
         const ts_unix_sec = Math.floor(Date.now() / 1000);
@@ -66,7 +80,7 @@ class PostInterface {
         const info = stmt.run(args);
 
         let success = true;
-        let message = "Successully wrote post to database";
+        message = "Successully wrote post to database";
         let data = {};
         if (info.changes < 1) {
             message = "Failed to write post to database";
@@ -80,11 +94,7 @@ class PostInterface {
 
             if (categories) this.associate_categories(post_id, categories);
 
-            // Query db for post
-            const query_stmt = this.#db.prepare(`SELECT * FROM posts WHERE id = ?`);
-
-            // Returns undefined if statement was valid, but id not in table
-            data = query_stmt.get(post_id);
+            data = this.get_post_by_id(post_id);
 
             if (!!data) {
                 data.categories = categories;
@@ -101,15 +111,40 @@ class PostInterface {
         };
     }
 
-    get_post_by_id(id) {}
+    /**
+     * Gets post associated with id. Returns post object if a post
+     * with the associated id exists, otherwise, returns undefined.
+     */
+    get_post_by_id(id) {
+        const stmt = this.#db.prepare(`SELECT * FROM posts WHERE id = ?`);
+        return stmt.get(id);
+    }
 
-    get_posts_by_author(author) {}
 
-    get_posts_after(ts_unix_sec) {}
+    get_posts_by_author(author) {
+        const stmt = this.#db.prepare(`SELECT * FROM posts WHERE author = ?`);
+        return stmt.all(author);
+    }
 
-    get_posts_before(ts_unix_sec) {}
+    get_posts_after(ts_unix_sec) {
+        const stmt = this.#db.prepare(`SELECT * FROM posts WHERE ts_unix_sec > ?`);
+        return stmt.all(ts_unix_sec);
+    }
 
-    get_posts_of_category(category) {}
+    get_posts_before(ts_unix_sec) {
+        const stmt = this.#db.prepare(`SELECT * FROM posts WHERE ts_unix_sec < ?`);
+        return stmt.all(ts_unix_sec);
+    }
+
+    // TODO: TESTME
+    get_posts_of_category(category) {
+        const stmt = this.#db.prepare(
+            `SELECT * FROM posts as p 
+                LEFT JOIN post_categories as pc ON p.id = pc.post_id 
+                WHERE pc.category = ?`
+        );
+        return stmt.all(category);
+    }
 
     get_parent_of(id) {}
 
