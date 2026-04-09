@@ -37,7 +37,7 @@ CREATE TABLE posts (
 
 CREATE TABLE post_categories (
     id INTEGER PRIMARY KEY,
-    post_id INTEGER REFERENCES posts(id),
+    post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
     category TEXT,
     UNIQUE(post_id, category)
 );
@@ -46,7 +46,7 @@ CREATE TABLE users (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
     email TEXT,
-    url TEXT,
+    url TEXT, -- optional
     comment_count INTEGER,
     UNIQUE(name, email, url)
 );
@@ -61,7 +61,7 @@ CREATE TABLE comments (
     ts_readable TEXT GENERATED ALWAYS AS (
         STRFTIME('%Y-%m-%dT%H:%M:%SZ', ts_unix_sec, 'unixepoch')
     ) VIRTUAL,
-    user_id INTEGER REFERENCES users(id),
+    user_id INTEGER REFERENCES users(id), -- Can be null if user gets deleted
     comment TEXT NOT NULL
 );
 CREATE INDEX idx_comments_user_id ON users(name);

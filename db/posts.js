@@ -120,12 +120,14 @@ class PostInterface {
      */
     get_post_by_id(id) {
         const stmt = this.#db.prepare(`SELECT * FROM posts WHERE id = ?`);
-        const data = stmt.get(id);
+        let data = stmt.get(id);
 
         let message = `Successfully retrieved post with id ${id}`;
         let success = true;
         if (data === undefined) {
+            success = false;
             message = `Couldn't find a post with id ${id}`;
+            data = {};
         }
 
         return { success, data, message };
@@ -165,7 +167,7 @@ class PostInterface {
 
     get_posts_created_before(ts_unix_sec) {
         const stmt = this.#db.prepare(
-            `SELECT * FROM posts WHERE ts_unix_sec < ?`
+            `SELECT * FROM posts WHERE ts_unix_sec < ? ORDER BY ts_unix_sec ASC`
         );
         const data = stmt.all(ts_unix_sec);
 
@@ -233,11 +235,47 @@ class PostInterface {
         return { success, data, message };
     }
 
-    get_parent_of(id) {}
+    get_parent_of(id) {
+        const child_post = this.get_post_by_id(id);
+
+        let success = true;
+        let message = `Successfully retrieved parent of post ${id}`;
+        if (child_post.data.parent === null) {
+            success = false;
+            message = `Failed to retrieve parent of post ${id}: has no parent`;
+            this.logger.error(message);
+        }
+
+        let data = {};
+        if (success) {
+            data = this.get_post_by_id(child_post.data.parent).data; 
+        }
+
+        return { success, data, message };
+    }
+
+    delete_post(id) {
+        const stmt = this.#db.prepare(`
+            DELETE FROM posts WHERE id = ?
+        `);
+        const info = stmt.run(id);
+
+        let success = true;
+        let message = "Successully deleted post from database";
+        if (info.changes < 1) {
+            message = "Failed to delete post from database";
+            this.logger.error(message);
+            success = false;
+        } 
+
+        return { 
+            success: success,
+            data: {},
+            message: message
+        };
+    }
 
     update_post() {}
-
-    delete_post() {}
 }
 
 module.exports = PostInterface;
