@@ -97,7 +97,7 @@ class PostInterface {
 
             data = this.get_post_by_id(post_id).data;
 
-            if (!!data) {
+            if (Object.keys(data).length > 0) {
                 data.categories = categories;
                 this.logger.info(
                     `New post with id ${post_id} successfully added to database`
@@ -261,9 +261,9 @@ class PostInterface {
         const info = stmt.run(id);
 
         let success = true;
-        let message = "Successully deleted post from database";
+        let message = `Successully deleted post ${id} from database`;
         if (info.changes < 1) {
-            message = "Failed to delete post from database";
+            message = `Failed to delete post ${id} from database`;
             this.logger.error(message);
             success = false;
         } 
@@ -275,7 +275,31 @@ class PostInterface {
         };
     }
 
-    update_post() {}
+    update_post(id, updated_content) {
+        const last_updated_unix_sec = Math.floor(Date.now() / 1000);
+
+        const stmt = this.#db.prepare(`
+            UPDATE posts SET content = ?, last_updated_unix_sec = ? 
+                WHERE id = ?
+        `);
+        const info = stmt.run(updated_content, last_updated_unix_sec, id);
+
+        let success = true;
+        let message = `Successfully updated post ${id}`;
+        let data = {};
+        if (info.changes < 1) {
+            message = `Failed to update post ${id}`;
+            this.logger.error(message);
+            success = false;
+        }
+
+        // collect updated data
+        if (success) {
+            data = this.get_post_by_id(id).data;
+        }
+
+        return { success, data, message };
+    }
 }
 
 module.exports = PostInterface;

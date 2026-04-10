@@ -229,11 +229,43 @@ describe("PostInterface", async (t) => {
     });
 
     it("can update existing posts", () => {
-        // not implemented
+        const aug_data = post_interface.create_post({
+            author: "St. Augustine",
+            content: "ordo amoris",
+            categories: ["Love", "Theology"]
+        });
+
+        assert.strictEqual(aug_data.data.content, "ordo amoris");
+
+        const updated_data = post_interface.update_post(
+            aug_data.data.id,
+            "order loves"
+        );
+
+        assert.strictEqual(updated_data.success, true);
+        assert.strictEqual(updated_data.data.content, "order loves");
+
+        aug_id = updated_data.data.id;
     });
 
-    it("can get posts last updated after ts", () => {
-        // not implemented
+    let update_ts;
+    it("can get posts last updated after ts", async () => {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        update_ts = Math.floor(Date.now() / 1000);
+
+        // Wait a bit
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        const updated_data = post_interface.update_post(
+            aug_id,
+            "ordered loves"
+        );
+
+        const recently_updated = post_interface.get_posts_last_updated_after(update_ts);
+        assert.strictEqual(recently_updated.success, true);
+        assert.strictEqual(recently_updated.data.length, 1);
+        assert.strictEqual(recently_updated.data[0].id, aug_id);
+        assert.strictEqual(recently_updated.data[0].content, "ordered loves");
     });
 
     it("can get posts last updated before ts", () => {
