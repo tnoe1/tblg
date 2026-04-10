@@ -228,7 +228,7 @@ describe("PostInterface", async (t) => {
         assert.strictEqual(fake_info.success, false);
     });
 
-    it("can update existing posts", () => {
+    it("can update existing posts", async () => {
         const aug_data = post_interface.create_post({
             author: "St. Augustine",
             content: "ordo amoris",
@@ -237,6 +237,10 @@ describe("PostInterface", async (t) => {
 
         assert.strictEqual(aug_data.data.content, "ordo amoris");
 
+        const original_last_updated_ts = aug_data.data.last_updated_unix_sec;
+
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+
         const updated_data = post_interface.update_post(
             aug_data.data.id,
             "order loves"
@@ -244,6 +248,9 @@ describe("PostInterface", async (t) => {
 
         assert.strictEqual(updated_data.success, true);
         assert.strictEqual(updated_data.data.content, "order loves");
+
+        const new_last_updated_ts = updated_data.data.last_updated_unix_sec;
+        assert.notStrictEqual(original_last_updated_ts, new_last_updated_ts);
 
         aug_id = updated_data.data.id;
     });
@@ -256,7 +263,7 @@ describe("PostInterface", async (t) => {
         // Wait a bit
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        const updated_data = post_interface.update_post(
+        post_interface.update_post(
             aug_id,
             "ordered loves"
         );
