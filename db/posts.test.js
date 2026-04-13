@@ -7,7 +7,7 @@ const fs = require("node:fs");
 const { join } = require("node:path");
 
 // This should be deleted after tests are run
-const TEST_DB_DIR = join(__dirname, 'data/test');
+const TEST_DB_DIR = join(__dirname, 'data/posts_test');
 if (!fs.existsSync(TEST_DB_DIR)) fs.mkdirSync(TEST_DB_DIR, { recursive: true });
 
 const TEST_DB_PATH = join(TEST_DB_DIR, 'tblg_test.db');
@@ -228,6 +228,7 @@ describe("PostInterface", async (t) => {
         assert.strictEqual(fake_info.success, false);
     });
 
+    let split_ts;
     it("can update existing posts", async () => {
         const aug_data = post_interface.create_post({
             author: "St. Augustine",
@@ -239,36 +240,27 @@ describe("PostInterface", async (t) => {
 
         const original_last_updated_ts = aug_data.data.last_updated_unix_sec;
 
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        split_ts = Math.floor(Date.now() / 1000);
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
         const updated_data = post_interface.update_post(
             aug_data.data.id,
-            "order loves"
+            "ordered loves"
         );
 
         assert.strictEqual(updated_data.success, true);
-        assert.strictEqual(updated_data.data.content, "order loves");
+        assert.strictEqual(updated_data.data.content, "ordered loves");
 
-        const new_last_updated_ts = updated_data.data.last_updated_unix_sec;
-        assert.notStrictEqual(original_last_updated_ts, new_last_updated_ts);
+        const updated_ts = updated_data.data.last_updated_unix_sec;
+        assert.notStrictEqual(original_last_updated_ts, updated_ts);
 
         aug_id = updated_data.data.id;
     });
 
-    let update_ts;
     it("can get posts last updated after ts", async () => {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        update_ts = Math.floor(Date.now() / 1000);
-
-        // Wait a bit
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        post_interface.update_post(
-            aug_id,
-            "ordered loves"
-        );
-
-        const recently_updated = post_interface.get_posts_last_updated_after(update_ts);
+        const recently_updated = post_interface.get_posts_last_updated_after(split_ts);
         assert.strictEqual(recently_updated.success, true);
         assert.strictEqual(recently_updated.data.length, 1);
         assert.strictEqual(recently_updated.data[0].id, aug_id);
@@ -276,11 +268,24 @@ describe("PostInterface", async (t) => {
     });
 
     it("can get posts last updated before ts", () => {
-        // not implemented
+        const past_updated = post_interface.get_posts_last_updated_before(split_ts);
+        assert.strictEqual(past_updated.success, true);
+        assert.strictEqual(past_updated.data.length, 3);
     });
 
     it("can get posts associated with specified category", () => {
-        // not implemented
+        const love_posts = post_interface.get_posts_of_category("Love");
+        const norm_love_posts = post_interface.get_posts_of_category("love");
+        assert.strictEqual(love_posts.data.length, 4);
+        assert.strictEqual(love_posts.data.length, norm_love_posts.data.length);
+        assert.deepStrictEqual(love_posts.data, norm_love_posts.data);
+
+        const construction_posts = post_interface.get_posts_of_category("Construction");
+        assert.strictEqual(construction_posts.data.length, 1);
+        assert.strictEqual(construction_posts.data[0].author, "Ivan Noel");
+
+        const coffee_posts = post_interface.get_posts_of_category("Coffee");
+        assert.strictEqual(coffee_posts.data.length, 0);
     });
 
     // Teardown

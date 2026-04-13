@@ -7,8 +7,9 @@
 class CommentInterface {
     #db;
 
-    constructor(db) {
+    constructor(db, logger) {
         this.#db = db;
+        this.logger = logger;
     }
 
     // TODO

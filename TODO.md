@@ -1,7 +1,7 @@
 - [ ] Stub out system design and vision
     - [x] Finish designing data model
-    - [ ] Finish writing posts.js
-    - [ ] Finish testing posts.js
+    - [x] Finish writing posts.js
+    - [x] Finish testing posts.js
     - [ ] Finish writing comments.js
     - [ ] Finish testing comments.js 
     - [ ] Decide if everything is a post or not (e.g. "about" and "contact")

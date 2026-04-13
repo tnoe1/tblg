@@ -30,7 +30,7 @@ class PostInterface {
 
         try {
             const categorize_post = this.#db.transaction((cs) => {
-                for (const c of cs) stmt.run(post_id, c);
+                for (const c of cs) stmt.run(post_id, c.toLowerCase());
             });
 
             categorize_post(categories);
@@ -133,7 +133,6 @@ class PostInterface {
         return { success, data, message };
     }
 
-
     get_posts_by_author(author) {
         const stmt = this.#db.prepare(`SELECT * FROM posts WHERE author = ?`);
         const data = stmt.all(author);
@@ -223,7 +222,7 @@ class PostInterface {
                 LEFT JOIN post_categories as pc ON p.id = pc.post_id 
                 WHERE pc.category = ?`
         );
-        const data = stmt.all(category);
+        const data = stmt.all(category.toLowerCase());
 
         let message = `Successfully retrieved ${data.length} posts with ` +
             `category ${category}`;
