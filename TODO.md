@@ -3,6 +3,8 @@
     - [x] Finish writing posts.js
     - [x] Finish testing posts.js
     - [ ] Finish writing comments.js
+        - [ ] Finish writing `create_user`
+        - [ ] Finish writing `add_comment`
     - [ ] Finish testing comments.js 
     - [ ] Decide if everything is a post or not (e.g. "about" and "contact")
 - [ ] Finish modular db subsystem encapsulation
