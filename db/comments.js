@@ -12,40 +12,19 @@ class CommentInterface {
         this.logger = logger;
     }
 
-    create_user({ name, email, url } = {}) {
-        let fields = "name";
-        let qms = "?";
-        let args = [name];
-        if (email) {
-            fields += ", email";
-            qms += ", ?";
-            args.push(email);
-        }
+    get_user_by_id(id) {
+        const stmt = this.#db.prepare(`SELECT * FROM users WHERE id = ?`);
+        let data = stmt.get(id);
 
-        if (url) {
-            fields += ", url";
-            qms += ", ?";
-            args.push(url);
-        } 
-
-        const stmt = this.#db.prepare(`
-            INSERT INTO users (${fields}) VALUES (${qms})
-        `);
-        const info = stmt.run(...args);
-
+        let message = `Successfully retrieved user with id ${id}`;
         let success = true;
-        let message = "Successfully created new user";
-        if (info.changes < 1) {
-            message = "Failed to create new user";
-            this.logger.error(message);
+        if (data === undefined) {
             success = false;
+            message = `Couldn't find a user with id ${id}`;
+            data = {};
         }
 
-        if (success) {
-            const user_id = info.lastInsertRowid;
-            
-            // TODO: Query user by id, and return the object as "data"
-        }
+        return { success, data, message };
     }
 
     /**
@@ -90,6 +69,57 @@ class CommentInterface {
         return { success, data, message };
     }
 
+    create_user({ name, email, url } = {}) {
+        let fields = "name";
+        let args = [name];
+        if (email) {
+            fields += ", email";
+            args.push(email);
+        }
+
+        if (url) {
+            fields += ", url";
+            args.push(url);
+        } 
+
+        const stmt = this.#db.prepare(`
+            INSERT INTO users (${fields}) 
+                VALUES (${('?, '.repeat(args.length)).slice(0, -2)})
+        `);
+        const info = stmt.run(...args);
+
+        let success = true;
+        let message = "Successfully created new user";
+        let data = {};
+        if (info.changes < 1) {
+            message = "Failed to create new user";
+            this.logger.error(message);
+            success = false;
+
+            return { success, data, message };
+        }
+
+        const user_id = info.lastInsertRowid;
+        data = this.get_user_by_id(user_id).data;
+
+        if (Object.keys(data).length > 0) {
+            this.logger.info(
+                `New user with id ${user_id} added to database`
+            );
+        } else {
+            this.logger.error(`Couldn't find new user in database`);
+        }
+
+        return {
+            success: success,
+            data: data ?? {},
+            message: message
+        };
+    }
+
+    // TODO: Implement me
+    get_comment_by_id(id) {}
+
     add_comment({ post_id, name, email, url, comment } = {}) {
         let message;
         if (!post_id || !name || !comment) {
@@ -108,13 +138,46 @@ class CommentInterface {
         // Get user id if the user already exists, otherwise create
         // a new user.
         let user_results = this.get_user({ name, email, url });
-        if (!success) {
-            // TODO: Figure out what create_user returns and continue adding 
-            // comment.
-            this.create_user({ name, email, url });
+        if (!user_results.success) {
+            user_results = this.create_user({ name, email, url });
         }
 
-        // TODO 
+        // Now we have a user_id and a post_id
+        const ts_unix_sec = Math.floor(Date.now() / 1000);
+
+        let cols = `post_id, user_id, ts_unix_sec, comment`;
+        const args = [post_id, user_id, ts_unix_sec, comment];
+
+        const stmt = this.#db.prepare(`
+            INSERT INTO comments (${cols})
+                VALUES (${('?, '.repeat(args.length)).slice(0, -2)}) 
+        `);
+
+        const info = stmt.run(args);
+
+        let success = true;
+        message = `Successfully wrote new comment to database`;
+        let data = {};
+        if (info.changes < 1) {
+            message = `Failed to write new comment to database`;
+            this.logger.error(message);
+            success = false;
+        }
+
+        if (success) {
+            const comment_id = info.lastInsertRowid;
+
+            // TODO: Implement get_comment_by_id()
+            data = this.get_comment_by_id(comment_id).data;
+
+            // TODO: validate that the data in the comment is non-trivial
+        }
+
+        return {
+            success: success,
+            data: data ?? {},
+            message: message
+        };
     }
 }
 
