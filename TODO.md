@@ -1,14 +1,10 @@
 - [ ] Stub out system design and vision
-    - [x] Finish designing data model
-    - [x] Finish writing posts.js
-    - [x] Finish testing posts.js
-    - [ ] Finish writing comments.js
-        - [x] Finish writing `create_user`
-        - [x] Finish writing `add_comment`
-        - [ ] Finish writing `update_user`
-        - [ ] Finish writing `delete_user`
-        - [ ] Finish writing `update_comment`
-        - [ ] Finish writing `delete_comment`
-    - [ ] Finish testing comments.js 
+    - [x] Database Interface
+        - [x] Finish designing data model
+        - [x] Finish writing posts.js
+        - [x] Finish testing posts.js
+        - [x] Finish writing comments.js
+        - [x] Finish testing comments.js 
+    - [ ] Routes
     - [ ] Decide if everything is a post or not (e.g. "about" and "contact")
 - [ ] Finish modular db subsystem encapsulation

@@ -27,6 +27,11 @@ class CommentInterface {
         return { success, data, message };
     }
 
+    get_user_by_comment_id(id) {
+        const comment_data = this.get_comment_by_id(id);
+        return this.get_user_by_id(comment_data.data.user_id);
+    }
+
     /**
      * Gets any user rows matching the specified criteria. A name
      * MUST be specified.
@@ -55,7 +60,7 @@ class CommentInterface {
         }
 
         const stmt = this.#db.prepare(`SELECT * FROM users WHERE` + conditions);
-        let data = stmt.get(...args);
+        let data = stmt.all(...args);
 
         let success = true;
         message = `Successfully retrieved ${data.length} entries for user` +
@@ -117,33 +122,131 @@ class CommentInterface {
         };
     }
 
-    // TODO
-    update_user() {}
+    update_user(id, { name, email, url }={}) {
+        let cols = ``;
+        const args = [];
 
-    // TODO
-    delete_user() {}
+        if (name) {
+            cols += `name = ?, `;
+            args.push(name);
+        }
 
-    get_comment_by_id(id) {
-        let message;
-        let conditions = ` id = ?`;
-        let args = [id];
+        if (email) {
+            cols += `email = ?, `;
+            args.push(email);
+        }
 
-        const stmt = this.#db.prepare(
-            `SELECT * FROM comments WHERE` + conditions
-        );
-        let data = stmt.get(...args);
+        if (url) {
+            cols += `url = ?, `;
+            args.push(url);
+        }
+
+        // Get rid of last ', '
+        cols = cols.slice(0, -2);
+
+        const stmt = this.#db.prepare(`
+            UPDATE users SET ${cols} WHERE id = ?
+        `);
+
+        const info = stmt.run(...args);
 
         let success = true;
-        message = `Successfully retrieved comment associated with id ${id}`;
-        if (data.length === 0) {
+        let message = `Successfully updated user ${id}`;
+        let data = {};
+        if (info.changes < 1) {
+            message = `Failed to update user ${id}`;
+            this.logger.error(message);
             success = false;
-            message = `Couldn't find a comment with id ${id}`;
+        }
+
+        // collect updated data
+        if (success) {
+            data = this.get_user_by_id(id).data;
         }
 
         return { success, data, message };
     }
 
-    add_comment({ post_id, name, email, url, comment } = {}) {
+    increment_user_comment_count(id) {
+        const stmt = this.#db.prepare(`
+            UPDATE users SET comment_count = comment_count + 1 WHERE id = ?
+        `);
+
+        const info = stmt.run(id);
+
+        let success = true;
+        let message = `Successfully updated comment count for user ${id}`;
+        let data = {};
+        if (info.changes < 1) {
+            message = `Failed to update comment count for user ${id}`;
+            this.logger.error(message);
+            success = false;
+        }
+
+        // collect updated data
+        if (success) {
+            data = this.get_user_by_id(id).data;
+        }
+
+        return { success, data, message };
+    }
+
+    delete_user() {
+        const stmt = this.#db.prepare(`
+            DELETE FROM users WHERE id = ?
+        `);
+        const info = stmt.run(id);
+
+        let success = true;
+        let message = `Successully deleted user ${id} from database`;
+        if (info.changes < 1) {
+            message = `Failed to delete user ${id} from database`;
+            this.logger.error(message);
+            success = false;
+        } 
+
+        return { 
+            success: success,
+            data: {},
+            message: message
+        };
+    }
+
+    get_comment_by_id(id) {
+        const stmt = this.#db.prepare(
+            `SELECT * FROM comments WHERE id = ?`
+        );
+        let data = stmt.get(id);
+
+        let success = true;
+        let message = `Successfully retrieved comment associated with id ${id}`;
+        if (data === undefined) {
+            success = false;
+            message = `Couldn't find a comment with id ${id}`;
+            data = {};
+        }
+
+        return { success, data, message };
+    }
+
+    get_comments_by_user_id(id) {
+        const stmt = this.#db.prepare(
+            `SELECT * FROM comments WHERE user_id = ?` 
+        );
+
+        let data = stmt.all(id);
+
+        let success = true;
+        let message = `Successfully retrieved comments by user ${id}`;
+        if (data.length === 0) {
+            success = false;
+            message = `Couldn't find any comments by user ${id}`;
+        }
+
+        return { success, data, message };
+    }
+
+    create_comment({ post_id, name, email, url, comment } = {}) {
         let message;
         if (!post_id || !name || !comment) {
             message = `Failed to add comment: must specify post_id, name,` +
@@ -163,13 +266,22 @@ class CommentInterface {
         let user_results = this.get_user({ name, email, url });
         if (!user_results.success) {
             user_results = this.create_user({ name, email, url });
+        } else {
+            this.increment_user_comment_count(user_results.data.id);
         }
 
         // Now we have a user_id and a post_id
         const ts_unix_sec = Math.floor(Date.now() / 1000);
 
-        let cols = `post_id, user_id, ts_unix_sec, comment`;
-        const args = [post_id, user_id, ts_unix_sec, comment];
+        let cols = `post_id, user_id, ts_unix_sec, ` +
+            `last_updated_unix_sec, comment`;
+        const args = [
+            post_id,
+            user_results.data.id,
+            ts_unix_sec,
+            ts_unix_sec,
+            comment
+        ];
 
         const stmt = this.#db.prepare(`
             INSERT INTO comments (${cols})
@@ -192,7 +304,6 @@ class CommentInterface {
 
             data = this.get_comment_by_id(comment_id).data;
 
-            // TODO: validate that the data in the comment is non-trivial
             if (Object.keys(data).length > 0) {
                 this.logger.info(
                     `New comment with id ${comment_id} ` +
@@ -210,11 +321,122 @@ class CommentInterface {
         };
     }
 
-    // TODO
-    update_comment() {}
+    update_comment(id, updated_comment) {
+        const last_updated_unix_sec = Math.floor(Date.now() / 1000);
 
-    // TODO
-    delete_comment() {}
+        const stmt = this.#db.prepare(`
+            UPDATE comments SET comment = ?, last_updated_unix_sec = ? 
+                WHERE id = ?
+        `);
+        const info = stmt.run(updated_comment, last_updated_unix_sec, id);
+
+        let success = true;
+        let message = `Successfully updated comment ${id}`;
+        let data = {};
+        if (info.changes < 1) {
+            message = `Failed to update comment ${id}`;
+            this.logger.error(message);
+            success = false;
+        }
+
+        // collect updated data
+        if (success) {
+            data = this.get_comment_by_id(id).data;
+        }
+
+        return { success, data, message };
+    }
+
+    delete_comment(id) {
+        const stmt = this.#db.prepare(`
+            DELETE FROM comments WHERE id = ?
+        `);
+        const info = stmt.run(id);
+
+        let success = true;
+        let message = `Successully deleted comment ${id} from database`;
+        if (info.changes < 1) {
+            message = `Failed to delete comment ${id} from database`;
+            this.logger.error(message);
+            success = false;
+        } 
+
+        return { 
+            success: success,
+            data: {},
+            message: message
+        };
+    }
+
+    get_comments_created_after(ts_unix_sec) {
+        const stmt = this.#db.prepare(
+            `SELECT * FROM comments WHERE ts_unix_sec > ? ORDER BY ts_unix_sec ASC`
+        );
+        const data = stmt.all(ts_unix_sec);
+
+        let message = `Successfully retrieved ${data.length} comments with ` +
+            `creation timestamps exceeding ${ts_unix_sec}`;
+        let success = true;
+        if (data.length === 0) {
+            message = "Couldn't find any comments with creation timestamp " +
+                `exceeding ${ts_unix_sec}`;
+        }
+
+        return { success, data, message };
+    }
+
+    get_comments_created_before(ts_unix_sec) {
+        const stmt = this.#db.prepare(`
+            SELECT * FROM comments 
+                WHERE ts_unix_sec < ? ORDER BY ts_unix_sec ASC
+        `);
+        const data = stmt.all(ts_unix_sec);
+
+        let message = `Successfully retrieved ${data.length} comments with ` +
+            `creation timestamps less than ${ts_unix_sec}`;
+        let success = true;
+        if (data.length === 0) {
+            message = "Couldn't find any comments with creation timestamp " +
+                `less than ${ts_unix_sec}`;
+        }
+
+        return { success, data, message };
+    }
+
+    get_comments_last_updated_after(last_updated_unix_sec) {
+        const stmt = this.#db.prepare(`
+            SELECT * FROM comments WHERE last_updated_unix_sec > ? 
+                ORDER BY last_updated_unix_sec ASC
+        `);
+        const data = stmt.all(last_updated_unix_sec);
+
+        let message = `Successfully retrieved ${data.length} comments with ` +
+            `last updated timestamps exceeding ${last_updated_unix_sec}`;
+        let success = true;
+        if (data.length === 0) {
+            message = "Couldn't find any comments with last updated timestamp " +
+                `exceeding ${last_updated_unix_sec}`;
+        }
+
+        return { success, data, message };
+    }
+
+    get_comments_last_updated_before(last_updated_unix_sec) {
+        const stmt = this.#db.prepare(
+            `SELECT * FROM comments WHERE last_updated_unix_sec < ?`
+        );
+        const data = stmt.all(last_updated_unix_sec);
+
+        let message = `Successfully retrieved ${data.length} comments with ` +
+            `last updated timestamps less than ${last_updated_unix_sec}`;
+        let success = true;
+        if (data.length === 0) {
+            message = "Couldn't find any comments with creation timestamp " +
+                `less than ${last_updated_unix_sec}`;
+        }
+
+        return { success, data, message };
+    }
 }
 
 module.exports = CommentInterface;

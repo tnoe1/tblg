@@ -63,7 +63,11 @@ CREATE TABLE comments (
     ts_readable TEXT GENERATED ALWAYS AS (
         STRFTIME('%Y-%m-%dT%H:%M:%SZ', ts_unix_sec, 'unixepoch')
     ) VIRTUAL,
+    last_updated_unix_sec INTEGER NOT NULL,
+    last_updated_readable TEXT GENERATED ALWAYS AS (
+        STRFTIME('%Y-%m-%dT%H:%M:%SZ', last_updated_unix_sec, 'unixepoch')
+    ) VIRTUAL,
     comment TEXT NOT NULL
 );
-CREATE INDEX idx_comments_user_id ON users(user_id);
-CREATE INDEX idx_comments_post_id ON users(post_id);
+CREATE INDEX idx_comments_user_id ON comments(user_id);
+CREATE INDEX idx_comments_post_id ON comments(post_id);
