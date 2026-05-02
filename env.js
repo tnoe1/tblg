@@ -1,7 +1,8 @@
 require('dotenv').config()
+const env = process.env;
 
 module.exports = {
-    db: {
-        
+    app: {
+        port: env.TBLG_PORT
     }
 };

@@ -1,3 +1,4 @@
+const LoggedEntity = require("../lib/LoggedEntity");
 
 class CategoryAssociationError extends Error {
     constructor(message, post_id, categories, error) {
@@ -15,12 +16,13 @@ class CategoryAssociationError extends Error {
  * Any logic related to posts gets encapsulated here.
  *
  */
-class PostInterface {
+class PostInterface extends LoggedEntity {
     #db;
 
-    constructor(db, logger) {
+    constructor(db, tag) {
+        // Gives us this.logger
+        super(tag);
         this.#db = db;
-        this.logger = logger;
     }
 
     associate_categories(post_id, categories) {

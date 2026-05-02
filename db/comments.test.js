@@ -104,8 +104,12 @@ describe("CommentInterface", async (t) => {
     let comment_interface;
     before(() => {
         const db = create_test_db();
-        comment_interface = new CommentInterface(db, logger);
-        post_interface = new PostInterface(db, logger);
+        comment_interface = new CommentInterface(db, "comments-interface");
+        post_interface = new PostInterface(db, "posts-interface");
+
+        // dummify the loggers
+        comment_interface.logger = logger;
+        post_interface.logger = logger;
     });
 
     let init_post_id;

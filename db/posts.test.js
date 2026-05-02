@@ -103,7 +103,10 @@ describe("PostInterface", async (t) => {
     let post_interface;
     before(() => {
         const db = create_test_db();
-        post_interface = new PostInterface(db, logger);
+        post_interface = new PostInterface(db, "posts-interface");
+
+        // dummify the logger
+        post_interface.logger = logger;
     });
 
     // Tests here

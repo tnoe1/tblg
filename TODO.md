@@ -11,9 +11,19 @@
     - No. I want to do server-side rendering since it improves SEO (since
       HTML coming from server is pre-formed). Project should have a `views`
       directory containing html templates.
+- [x] Services (business logic associated with http routes)
+    - No-op for now.
 - [ ] Controllers (http routes)
+    - TODO: http server setup shown in controller.js at the moment. Can ping
+      it with a curl request such as:
+          ```bash
+          curl -X POST "http://127.0.0.1:3009/tacobell?nachos=false&hi=hello" \
+               -H "Content-Type: text/plain" \
+               -d 'hi tblg'
+          ```
+      Pick up at moving body stream consolidation into `RequestParser`.
     - [ ] Write RequestParser
     - [ ] Write RequestRouter
     - [ ] Package up Controller logic into `controllers/index.js`
-- [ ] Services (business logic associated with http routes)
 - [ ] Views (html templates)
+- [ ] Put TLS (https) concern at infrastructure layer via NGINX

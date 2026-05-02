@@ -1,15 +1,17 @@
+const LoggedEntity = require("../lib/LoggedEntity");
 
 /**
  * Comments are at least names and a text string, but can also include
  * an email address and a url. All comments are associated with a post.
  *
  */
-class CommentInterface {
+class CommentInterface extends LoggedEntity {
     #db;
 
-    constructor(db, logger) {
+    constructor(db, tag) {
+        // Gives us this.logger
+        super(tag);
         this.#db = db;
-        this.logger = logger;
     }
 
     get_user_by_id(id) {
