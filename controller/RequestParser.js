@@ -1,16 +1,28 @@
+const { once } = require("node:events");
+const LoggedEntity = require("../lib/LoggedEntity");
 
-class RequestParser {
-    parse_request(req) {
-        console.log(req.url);
+class RequestParser extends LoggedEntity {
+    constructor() {
+        // Making this a LoggedEntity provides access to logging methods.
+        super("req-parser");
+    }
+
+    async parse_request(req) {
         const [path, raw_params] = req.url.split('?');
-        console.log(raw_params);
         const params = Object.fromEntries(
             raw_params.split('&').map((e) => e.split('='))
         );
 
         const method = req.method;
         const headers = req.headers;
-        const body = null; // TODO
+
+        let body = '';
+        req.on('data', (chunk) => {
+            body += chunk;
+        });
+
+        // Wait for all data to be received
+        await once(req, 'end');
 
         return { 
             path,

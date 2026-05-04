@@ -15,7 +15,7 @@ class Controller extends LoggedEntity {
         this.router = new RequestRouter();
 
         this.config = null;
-        this.#server = http.createServer(this.handle_request.bind(this));
+        this.#server = null; 
     }
 
     configure(config) {
@@ -31,6 +31,7 @@ class Controller extends LoggedEntity {
         }
 
         const port = this.config.app.port;
+        this.#server = http.createServer(this.handle_request.bind(this));
         this.#server.listen(port, () => {
             this.logger.info(`tblg server listening on port ${port}`);
         });
@@ -38,28 +39,21 @@ class Controller extends LoggedEntity {
 
     /**
      * This will get called every time a request comes in.
+     *    req is an IncomingMessage
+     *    res is a ServerResponse
      */
-    handle_request(req, res) {
-        const req_obj = this.parser.parse_request(req);
-        this.logger.info(JSON.stringify(req_obj));
-        
-        // TODO: Need to put body stream consolidation into parse_request.
-        // This will likely involve Promises and async shenanigans.
+    async handle_request(req, res) {
+        try {
+            const req_obj = await this.parser.parse_request(req);
+            this.logger.info(JSON.stringify(req_obj));
 
-        // chunk is a Buffer
-        let body = '';
-        req.on('data', (chunk) => {
-            body += chunk;
-        });
-        req.on('end', () => {
-            this.logger.info(`body: ${body}`);
-        });
-
-        // req is an IncomingMessage
-        // res is a ServerResponse
-
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end('Hello from tblg\n');
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            res.end('ACK from tblg\n');
+        } catch (err) {
+            this.logger.error(err);
+            res.writeHead(500);
+            res.end('Internal server error\n');
+        }
     }
 }
 

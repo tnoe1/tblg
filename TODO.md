@@ -22,7 +22,7 @@
                -d 'hi tblg'
           ```
       Pick up at moving body stream consolidation into `RequestParser`.
-    - [ ] Write RequestParser
+    - [x] Write RequestParser
     - [ ] Write RequestRouter
     - [ ] Package up Controller logic into `controllers/index.js`
 - [ ] Views (html templates)
