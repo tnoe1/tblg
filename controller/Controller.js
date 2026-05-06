@@ -45,10 +45,15 @@ class Controller extends LoggedEntity {
     async handle_request(req, res) {
         try {
             const req_obj = await this.parser.parse_request(req);
-            this.logger.info(JSON.stringify(req_obj));
 
-            res.writeHead(200, { 'Content-Type': 'text/plain' });
-            res.end('ACK from tblg\n');
+            // Has a status, has headers, has message
+            const info = this.router.route(req_obj)
+
+            res.writeHead(info.status, info.headers);
+            res.end(JSON.stringify({
+                status: info.status,
+                message: info.message
+            }) + '\n');
         } catch (err) {
             this.logger.error(err);
             res.writeHead(500);
