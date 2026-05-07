@@ -1,6 +1,6 @@
 const Controller = require("./Controller");
-const services = require("../services");
+const { service_interface } = require("../services");
 
 module.exports = {
-    controller: new Controller(services)
+    controller: new Controller(service_interface)
 };

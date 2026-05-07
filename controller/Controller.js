@@ -5,14 +5,12 @@ const RequestParser = require("./RequestParser");
 const RequestRouter = require("./RequestRouter");
 
 class Controller extends LoggedEntity {
-    #services;
     #server;
 
     constructor(services) {
         super("controller");
-        this.#services = services;
         this.parser = new RequestParser();
-        this.router = new RequestRouter();
+        this.router = new RequestRouter(services);
 
         this.config = null;
         this.#server = null; 
@@ -49,11 +47,8 @@ class Controller extends LoggedEntity {
             // Has a status, has headers, has message
             const info = this.router.route(req_obj)
 
-            res.writeHead(info.status, info.headers);
-            res.end(JSON.stringify({
-                status: info.status,
-                message: info.message
-            }) + '\n');
+            res.writeHead(info.status, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(info.body) + '\n');
         } catch (err) {
             this.logger.error(err);
             res.writeHead(500);

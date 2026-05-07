@@ -25,8 +25,14 @@
     - [x] Write RequestParser
     - [ ] Write RequestRouter
         - [x] Write test route
-        - [ ] Write route for ...
-        - [ ] Write route for ...
+        - [ ] Write route for serving home page
+        - [ ] Write route for serving indexed (?) posts
     - [ ] Package up Controller logic into `controllers/index.js`
 - [ ] Views (html templates)
+    - [ ] Finish writing `load_home()` in ServiceInterface.js 
+          (and `serve_home()` in RequestRouter.js)
+- [ ] Write service that checks the views folder for posts and uses that to
+      curate list available posts viewable by user.
+    - [ ] Add parser for enabling hidden (in-progress) posts that aren't
+          viewable.
 - [ ] Put TLS (https) concern at infrastructure layer via NGINX

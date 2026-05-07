@@ -1,12 +1,12 @@
 const LoggedEntity = require("../lib/LoggedEntity");
-const services = require("../services");
 
 class RequestRouter extends LoggedEntity {
     #services;
 
-    constructor() {
+    constructor(services) {
         super("req-router");
         this.route_map = {
+            "/": this.serve_home.bind(this),
             "/test": this.test_route.bind(this)
         };
         this.#services = services;
@@ -26,12 +26,17 @@ class RequestRouter extends LoggedEntity {
         if (!(req_obj.path in this.route_map)) {
             return {
                 status: 404,
-                headers: { 'Content-Type': 'text/plain' },
-                message: "Resource not found\n"
+                body: { message: "Resource not found\n" }
             };
         }
 
         return this.route_map[req_obj.path](req_obj);
+    }
+
+    serve_home(req_obj) {
+        const home_html = this.#services.load_home()
+
+        // TODO: Serve it!
     }
 
     test_route(req_obj) {
@@ -50,8 +55,7 @@ class RequestRouter extends LoggedEntity {
 
         return {
             status: 200,
-            headers: { 'Content-Type': 'text/plain' },
-            message: 'ACK from tblg\n'
+            body: { message: 'ACK from tblg\n' }
         };
     }
 }
