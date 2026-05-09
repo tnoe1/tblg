@@ -45,7 +45,12 @@ class RequestRouter extends LoggedEntity {
      *     - body
      */
     async route(req_obj) {
+        this.logger.info(
+            `Received ${req_obj.method} request at ${req_obj.path}`
+        );
+
         if (!(req_obj.path in this.route_map)) {
+            this.logger.error(`${req_obj.path} is an invalid route`);
             return {
                 status: 404,
                 status_message: 'Bad Request',
@@ -60,9 +65,6 @@ class RequestRouter extends LoggedEntity {
     }
 
     async serve_home(req_obj) {
-        this.logger.info(
-            `Received ${req_obj.method} request at ${req_obj.path}`
-        );
         const home_html = await this.#services.load_home()
 
         if (home_html === null) {
@@ -114,15 +116,24 @@ class RequestRouter extends LoggedEntity {
     }
 
     async serve_asset(req_obj) {
-        this.logger.info(
-            `Received ${req_obj.method} request at ${req_obj.path}`
-        );
-
         // Check for request issues
         const asset_content_type = this._get_asset_content_type(req_obj.path);
-        if (asset_content_type === null || !this._is_safe(req_obj.path)) {
+        if (!this._is_safe(req_obj.path)) {
             this.logger.error(`Request attempted to escape from public ` +
                 `directory. Possible directory traversal attack.`);
+            return {
+                status: 404,
+                status_message: 'Bad Request',
+                headers: {
+                    'Content-Type': 'text/html; charset=UTF-8'
+                },
+                content: '404: Bad Request'
+            };
+        }
+
+        if (asset_content_type === null) {
+            this.logger.error(`Request attempted to access an ` + 
+                `unsupported filetype: ${req_obj.path}`);
             return {
                 status: 404,
                 status_message: 'Bad Request',
