@@ -35,6 +35,17 @@ class ServiceInterface extends LoggedEntity {
 
         return home_page;
     }
+
+    async load_asset(asset_path) {
+        let asset = null;
+        try {
+            asset = await fs.readFile(asset_path);
+        } catch (err) {
+            this.logger.error(`Failed to load asset: ${err}`);
+        }
+
+        return asset;
+    }
 }
 
 module.exports = ServiceInterface;

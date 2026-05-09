@@ -25,14 +25,43 @@
     - [x] Write RequestParser
     - [ ] Write RequestRouter
         - [x] Write test route
-        - [ ] Write route for serving home page
-        - [ ] Write route for serving indexed (?) posts
+        - [x] Write route for serving home page
+        - [ ] Write route for serving posts
+            - [x] How do we write posts? What is the actual workflow?
+                - Content column in posts table should be the html rendering of
+                a .md file in the `views/posts` folder. On startup, the
+                existing .md files will be compared with their current check-
+                sums in the db and if there's change, their checksum and html
+                will be updated in the database. On request (after 
+                initialization), the most recent version of the rendered
+                requested posts will be inserted into the post template and
+                sent to the client. After a new post has been added, restart
+                the server and refresh the browser and it should show up.
+            - [ ] Write test post tracer.
+                - [x] Implement asset serving in public directory (w/ security)
+                - [ ] Change db schema to incorporate `.md` checksums and
+                relative `.md` path into posts table.
+                    - [ ] TODO: Update PostInterface accordingly
+                - [ ] Implement `views/posts` directory scan-and-ingest
+                    - [ ] Iterate through directory and scrutinize checksum
+                    for posts already existing in db, and if post is updated
+                    translate to html and ingest into `content` column. If post
+                    is _new_, compute checksum, translate into `.html` and 
+                    ingest checksum and `.html` into new row in posts.
+                        - [ ] canned `.md` to `.html` transpiler 
+                        or roll-your-own?
+                - [ ] render post with assets in it (e.g. photos)
+                - [ ] render post with math in it
     - [ ] Package up Controller logic into `controllers/index.js`
 - [ ] Views (html templates)
-    - [ ] Finish writing `load_home()` in ServiceInterface.js 
+    - [x] Finish writing `load_home()` in ServiceInterface.js 
           (and `serve_home()` in RequestRouter.js)
-- [ ] Write service that checks the views folder for posts and uses that to
+    - [x] Figure out view template for posts
+        - Posts will be `.md` files that get parsed into 
+- [ ] Write method that checks the database for posts and uses that to
       curate list available posts viewable by user.
     - [ ] Add parser for enabling hidden (in-progress) posts that aren't
           viewable.
 - [ ] Put TLS (https) concern at infrastructure layer via NGINX
+- [ ] Dockerize
+- [ ] Deploy (AWS?)

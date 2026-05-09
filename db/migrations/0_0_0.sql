@@ -27,7 +27,9 @@ CREATE TABLE posts (
         STRFTIME('%Y-%m-%dT%H:%M:%SZ', ts_unix_sec, 'unixepoch')
     ) VIRTUAL,
     author TEXT NOT NULL,
-    content TEXT NOT NULL,
+    md_path TEXT NOT NULL,
+    md_checksum TEXT NOT NULL,
+    content TEXT NOT NULL, -- Most recent rendered .html goes here
     last_updated_unix_sec INTEGER NOT NULL,
     last_updated_readable TEXT GENERATED ALWAYS AS (
         STRFTIME('%Y-%m-%dT%H:%M:%SZ', last_updated_unix_sec, 'unixepoch')

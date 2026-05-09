@@ -1,4 +1,8 @@
+const fs = require("node:fs");
+const path = require("node:path");
 const LoggedEntity = require("../lib/LoggedEntity");
+
+const PUBLIC_PATH = path.resolve(__dirname, "../views/public");
 
 class RequestRouter extends LoggedEntity {
     #services;
@@ -10,6 +14,24 @@ class RequestRouter extends LoggedEntity {
             "/test": this.test_route.bind(this)
         };
         this.#services = services;
+
+        // Add items in public folder to route_map
+        let items;
+        try {
+            items = fs.readdirSync(PUBLIC_PATH, { withFileTypes: true });
+        } catch (err) {
+            this.logger.error(
+                `Encountered a problem while trying to ` + 
+                `read ${PUBLIC_PATH}: ${err}`
+            );
+            // Will induce a graceful server cleanup
+            process.kill(process.pid, 'SIGTERM');
+        }
+
+        const files = items.filter((i) => i.isFile()).map((i) => i.name);
+        files.forEach((f) => {
+            this.route_map[`/${f}`] = this.serve_asset.bind(this); 
+        });
     }
 
     /**
@@ -26,7 +48,11 @@ class RequestRouter extends LoggedEntity {
         if (!(req_obj.path in this.route_map)) {
             return {
                 status: 404,
-                body: { message: "Resource not found\n" }
+                status_message: 'Bad Request',
+                headers: {
+                    'Content-Type': 'text/html; charset=UTF-8'
+                },
+                content: '404: Bad Request'
             };
         }
 
@@ -46,11 +72,10 @@ class RequestRouter extends LoggedEntity {
                 headers: {
                     'Content-Type': 'text/html; charset=UTF-8'
                 },
-                content: '<p>500: Internal server error</p>'
+                content: '500: Internal server error'
             };
         }
 
-        // TODO: Serve it!
         return {
             status: 200,
             status_message: 'OK',
@@ -58,6 +83,79 @@ class RequestRouter extends LoggedEntity {
                 'Content-Type': 'text/html; charset=UTF-8'
             },
             content: home_html 
+        };
+    }
+
+    _get_asset_content_type(path) {
+        const extension = path.split(".").pop().toLowerCase();
+
+        let ext_map = {
+            'jpg': "image/jpeg",
+            'jpeg': "image/jpeg",
+            'png': "image/png",
+            'webp': "image/webp",
+            'gif': "image/gif",
+            'html': "text/html; charset=UTF-8",
+            'css': "text/css",
+            'svg': "image/svg+xml",
+            'xml': "application/xml",
+            'txt': "text/plain"
+        };
+
+        return ext_map[extension] ?? null;
+    }
+
+    _is_safe(asset_path) {
+        const resolved_path = path.resolve(
+            PUBLIC_PATH,
+            asset_path.split("/").pop()
+        );
+        return resolved_path.startsWith(PUBLIC_PATH + path.sep);
+    }
+
+    async serve_asset(req_obj) {
+        this.logger.info(
+            `Received ${req_obj.method} request at ${req_obj.path}`
+        );
+
+        // Check for request issues
+        const asset_content_type = this._get_asset_content_type(req_obj.path);
+        if (asset_content_type === null || !this._is_safe(req_obj.path)) {
+            this.logger.error(`Request attempted to escape from public ` +
+                `directory. Possible directory traversal attack.`);
+            return {
+                status: 404,
+                status_message: 'Bad Request',
+                headers: {
+                    'Content-Type': 'text/html; charset=UTF-8'
+                },
+                content: '404: Bad Request'
+            };
+        }
+
+        const asset = await this.#services.load_asset(
+            path.join(PUBLIC_PATH, req_obj.path)
+        );
+
+        // If something went wrong while trying to load the asset, server error.
+        if (asset === null) {
+            return {
+                status: 500,
+                status_message: 'Internal Server Error',
+                headers: {
+                    'Content-Type': 'text/html; charset=UTF-8'
+                },
+                content: '500: Internal Server Error'
+            };
+        }
+
+        return {
+            status: 200,
+            status_message: 'OK',
+            headers: {
+                'Content-Type': asset_content_type
+            },
+            content: asset
         };
     }
 
