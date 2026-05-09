@@ -22,7 +22,7 @@ class RequestRouter extends LoggedEntity {
      *     - headers
      *     - body
      */
-    route(req_obj) {
+    async route(req_obj) {
         if (!(req_obj.path in this.route_map)) {
             return {
                 status: 404,
@@ -30,13 +30,35 @@ class RequestRouter extends LoggedEntity {
             };
         }
 
-        return this.route_map[req_obj.path](req_obj);
+        return await this.route_map[req_obj.path](req_obj);
     }
 
-    serve_home(req_obj) {
-        const home_html = this.#services.load_home()
+    async serve_home(req_obj) {
+        this.logger.info(
+            `Received ${req_obj.method} request at ${req_obj.path}`
+        );
+        const home_html = await this.#services.load_home()
+
+        if (home_html === null) {
+            return {
+                status: 500,
+                status_message: 'Internal server error',
+                headers: {
+                    'Content-Type': 'text/html; charset=UTF-8'
+                },
+                content: '<p>500: Internal server error</p>'
+            };
+        }
 
         // TODO: Serve it!
+        return {
+            status: 200,
+            status_message: 'OK',
+            headers: {
+                'Content-Type': 'text/html; charset=UTF-8'
+            },
+            content: home_html 
+        };
     }
 
     test_route(req_obj) {
@@ -55,7 +77,11 @@ class RequestRouter extends LoggedEntity {
 
         return {
             status: 200,
-            body: { message: 'ACK from tblg\n' }
+            status_message: 'OK',
+            headers: {
+                'Content-Type': 'text/plain'
+            },
+            content: 'ACK from tblg\n'
         };
     }
 }

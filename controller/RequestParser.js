@@ -9,9 +9,13 @@ class RequestParser extends LoggedEntity {
 
     async parse_request(req) {
         const [path, raw_params] = req.url.split('?');
-        const params = Object.fromEntries(
-            raw_params.split('&').map((e) => e.split('='))
-        );
+
+        let params = {};
+        if (raw_params) {
+            params = Object.fromEntries(
+                raw_params.split('&').map((e) => e.split('='))
+            );
+        }
 
         const method = req.method;
         const headers = req.headers;
