@@ -6,21 +6,25 @@ const RequestRouter = require("./RequestRouter");
 
 class Controller extends LoggedEntity {
     #server;
+    #service_interface;
 
     constructor(services) {
         super("controller");
+
         this.parser = new RequestParser();
         this.router = new RequestRouter(services);
 
         this.config = null;
+
         this.#server = null; 
+        this.#service_interface = services;
     }
 
     configure(config) {
         this.config = config;
     }
 
-    start() {
+    async start() {
         if (!this.config) {
             this.logger.error(
                 'Need to run configure() before starting controller'
@@ -28,6 +32,10 @@ class Controller extends LoggedEntity {
             return;
         }
 
+        // Synchronize the posts
+        await this.#service_interface.synchronize_posts();
+
+        // Start the server
         const port = this.config.app.port;
         this.#server = http.createServer(this.handle_request.bind(this));
         this.#server.listen(port, () => {

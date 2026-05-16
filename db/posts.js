@@ -1,3 +1,4 @@
+const compute_checksum = require("../lib/compute_checksum");
 const LoggedEntity = require("../lib/LoggedEntity");
 
 class CategoryAssociationError extends Error {
@@ -6,6 +7,15 @@ class CategoryAssociationError extends Error {
         this.name = "CategoryAssociationError";
         this.post_id = post_id;
         this.category = categories;
+        this.cause = error;
+    }
+}
+
+class MarkdownHashingError extends Error {
+    constructor(message, md_path, error) {
+        super(message);
+        this.name = "MarkdownHashingError";
+        this.md_path = md_path;
         this.cause = error;
     }
 }
@@ -47,12 +57,13 @@ class PostInterface extends LoggedEntity {
     }
 
     /**
-     * Create a post.
+     * Create a post. Assumes that `content` is pre-transpiled .html (from .md).
      */
-    create_post({ author, content, parent_id, categories } = {}) {
+    async create_post({ author, content, md_path, parent_id, categories } = {}) {
         let message;
-        if (!author || !content) {
-            message = `Failed to create post: must specify author and content`;
+        if (!author || !content || !md_path) {
+            message = `Failed to create post: must specify author, ` + 
+                `content, and md_path`;
             this.logger.error(message);
             return {
                 success: false,
@@ -65,9 +76,29 @@ class PostInterface extends LoggedEntity {
 
         const ts_unix_sec = Math.floor(Date.now() / 1000);
 
+        let md_checksum;
+        try {
+            md_checksum = await compute_checksum(md_path, 'sha256');
+        } catch (err) {
+            this.logger.error(`Failed to hash markdown file: ${md_path}`);
+            throw new MarkdownHashingError(
+                `Failed to hash markdown file`,
+                md_path,
+                err
+            );
+        }  
+
         // At creation, last_updated ts === creation ts
-        let cols = `ts_unix_sec, last_updated_unix_sec, author, content`;
-        const args = [ts_unix_sec, ts_unix_sec, author, content];
+        let cols = `ts_unix_sec, last_updated_unix_sec, ` + 
+            `author, content, md_path, md_checksum`;
+        const args = [
+            ts_unix_sec,
+            ts_unix_sec,
+            author,
+            content,
+            md_path,
+            md_checksum
+        ];
 
         // If parent_id has been stipulated make sure that it gets inserted
         if (parent_id) {
@@ -276,14 +307,52 @@ class PostInterface extends LoggedEntity {
         };
     }
 
-    update_post(id, updated_content) {
+    /**
+     * Update the post associated with the given id and md_path.
+     *
+     * @param {Number} id - the post id
+     * @param {String} md_path - path to the post markdown file
+     * @param {String} updated_content - transpiled post html
+     *
+     * @returns {Object} the updated post object
+     */
+    async update_post(id, md_path, updated_content) {
+        if (!id || !md_path || !updated_content) {
+            message = `Failed to update post: must specify id, ` + 
+                `md_path, and updated_content`;
+            this.logger.error(message);
+            return {
+                success: false,
+                data: {},
+                message: message
+            };
+        }
+
         const last_updated_unix_sec = Math.floor(Date.now() / 1000);
 
+        let md_checksum;
+        try {
+            md_checksum = await compute_checksum(md_path, 'sha256');
+        } catch (err) {
+            this.logger.error(`Failed to hash markdown file: ${md_path}`);
+            throw new MarkdownHashingError(
+                `Failed to hash markdown file`,
+                md_path,
+                err
+            );
+        }  
+
         const stmt = this.#db.prepare(`
-            UPDATE posts SET content = ?, last_updated_unix_sec = ? 
-                WHERE id = ?
+            UPDATE posts SET md_path = ?, md_checksum = ?, content = ?, 
+                last_updated_unix_sec = ? WHERE id = ?
         `);
-        const info = stmt.run(updated_content, last_updated_unix_sec, id);
+        const info = stmt.run(
+            md_path,
+            md_checksum,
+            updated_content,
+            last_updated_unix_sec,
+            id
+        );
 
         let success = true;
         let message = `Successfully updated post ${id}`;

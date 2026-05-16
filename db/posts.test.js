@@ -1,10 +1,13 @@
 const { describe, it, before, after } = require("node:test");
 const assert = require("node:assert");
-const PostInterface = require("./posts");
 
 const Database = require('better-sqlite3');
 const fs = require("node:fs");
 const { join } = require("node:path");
+
+const LoggedEntity = require("../lib/LoggedEntity");
+const PostInterface = require("./posts");
+
 
 // This should be deleted after tests are run
 const TEST_DB_DIR = join(__dirname, 'data/posts_test');
@@ -28,50 +31,80 @@ const logger = {
     error: (s) => null
 };
 
-const create_test_db = () => {
+class DBInitializer extends LoggedEntity {
+    constructor(db_path, mig_path) {
+        super("tblgdb");
+        this.db_path = db_path;
+        this.mig_path = mig_path;
+
+        this.db = null;
+
+        // Destroy the log messages
+        this.logger = logger;
+    }
+
     /**
      * Convert a list of three integers to a decimal value
      */
-    const decimalize = ([d1, d2, d3]) => 100 * d1 + 10 * d2 + d3;
+    _decimalize([d1, d2, d3]) {
+        return 100 * d1 + 10 * d2 + d3;
+    }
     
     /**
      * Get the list of migration files from db/migrations.
      */
-    const get_migrations = () => fs.readdirSync(MIGRATIONS_PATH);
+    _get_migrations() {
+        return fs.readdirSync(MIGRATIONS_PATH); 
+    }
     
     /**
      * Get migration files in sorted order
      */
-    const get_sorted_migrations = () => {
-        return get_migrations().map((v) => v.split('.')[0].split('_').map((n) => +n)).sort((a, b) => {
-            // 'major.minor.patch'. For ascending, a - b should produce a 
-            // negative number. For descending b - a should produce a negative 
-            // number. Converting versions to decimal digit values for comparison.
-            return decimalize(a) - decimalize(b);
-        }).map((v) => v.map((n) => String(n)).join('_').concat('.sql'));
+    _get_sorted_migrations = () => {
+        return this._get_migrations()
+            .map((v) => v.split('.')[0].split('_').map((n) => +n))
+            .sort((a, b) => {
+                // 'major.minor.patch'. For ascending, a - b should produce a 
+                // negative number. For descending b - a should produce a 
+                // negative number. Converting versions to decimal digit values 
+                // for comparison.
+                return this._decimalize(a) - this._decimalize(b);
+            }).map((v) => v.map((n) => String(n)).join('_').concat('.sql'));
     };
     
     /**
      * Run a migration
      */
-    const run_migration = (db, m) => {
+    _run_migration(m) {
+        // Can't run a migration if db isn't initialized
+        if (this.db === null) {
+            this.logger.error(
+                `Can't run migration until db has been initialized`
+            );
+            return;
+        }
+
         try {
             // Apply m to db.
-            const m_str = fs.readFileSync(join(__dirname, 'migrations', m), 'utf8');
+            const m_str = fs.readFileSync(
+                join(__dirname, 'migrations', m),
+                'utf8'
+            );
     
-            // parse the sql commands (removing comments) and build the transaction
+            // parse the sql commands (removing comments) and build 
+            // the transaction. Filter gets rid of ''.
             const sql_cmds = m_str
                 .replace(/^--.*$/gm, "").split(';')
-                .map((s) => s.trim()).filter((s) => !!s); // Filter gets rid of ''
+                .map((s) => s.trim()).filter((s) => !!s); 
     
-            const run_mig = db.transaction(() => {
-                for (const c of sql_cmds) db.prepare(c).run();
+            const run_mig = this.db.transaction(() => {
+                for (const c of sql_cmds) this.db.prepare(c).run();
             });
     
             run_mig();
         } catch (error) {
             // Delete db file and hard error
-            fs.rmSync(TEST_DB_DIR, { recursive: true, force: true });
+            fs.unlinkSync(DB_PATH);
             throw new MigrationError(
                 "Failed to initialize database with migration files",
                 m.split('.')[0],
@@ -79,31 +112,105 @@ const create_test_db = () => {
             );
         }
     }; 
-    
-    const db = new Database(TEST_DB_PATH);
-    db.pragma('journal_mode = WAL'); // Recommended for performance
-    
-    const migrations = get_sorted_migrations();
-    // Initialize from migrations
-    for (const m of migrations) {
-        logger.info(`applying v${m.split('.')[0]} changes`);
-        run_migration(db, m);
-    }
 
-    return db;
-};
+    run() {
+        const db_preexistent = fs.existsSync(this.db_path);
+        
+        this.db = new Database(this.db_path);
+        this.db.pragma('journal_mode = WAL'); // Recommended for performance
+        
+        const migrations = this._get_sorted_migrations();
+        if (!db_preexistent) {
+            this.logger.info(
+                "tblg database doesn't exist. Initializing now..."
+            );
+        
+            // Initialize from migrations
+            for (const m of migrations) {
+                this.logger.info(`applying v${m.split('.')[0]} changes`);
+                this._run_migration(m);
+            }
+            this.logger.info(
+                "Migrations successfully applied. Database initialized."
+            );
+        } else {
+            this.logger.info(
+                "tblg database already exists. Making sure it's up to date..."
+            );
+        
+            // Check if migrated. If version correct, then nothing to apply. 
+            const latest_version = migrations.slice(-1)[0].split('.')[0];
+        
+            // Assumes a versions table with columns major, minor, 
+            // and patch exists
+            const version_data = this.db.prepare(`
+                SELECT major, minor, patch FROM versions 
+                    ORDER BY id DESC LIMIT 1
+            `).get();
+        
+            const db_version = [
+                'major',
+                'minor',
+                'patch'
+            ].map((k) => version_data[k]).join('_');
+
+            const migrated = (db_version === latest_version);
+
+            const db_number = this._decimalize(
+                db_version.split('_').map((n) => +n)
+            );
+
+            const latest_number = this._decimalize(
+                latest_version.split('_').map((n) => +n)
+            );
+        
+            // If we're somehow running a newer database version, do nothing
+            if (db_number > latest_number) {
+                this.logger.info(
+                    `tblg is (strangely) more than up-to-date: ` + 
+                    `v${db_version} (newest migration: v${latest_version})`
+                );
+
+                return;
+            }
+        
+            // Otherwise apply new migrations.
+            if (!migrated) {
+                this.logger.info(
+                    `db is on v${db_version}, need to ` + 
+                    `migrate to v${latest_version}`
+                );
+        
+                let idx = migrations.indexOf(db_version.concat('.sql')) + 1;
+                while (idx < migrations.length) {
+                    this.logger.info(
+                        `applying v${migrations[idx].split('.')[0]} migration`
+                    );
+                    this._run_migration(migrations[idx]);
+                    idx++;
+                }
+            }
+        
+            this.logger.info(
+                `tblg is up-to-date and using the newest db version: ` + 
+                `v${latest_version}`
+            );
+        }
+    }
+}
 
 const destroy_test_db = () => {
     fs.rmSync(TEST_DB_DIR, { recursive: true, force: true });
 };
 
+const db_initializer = new DBInitializer(TEST_DB_PATH, MIGRATIONS_PATH);
 
 describe("PostInterface", async (t) => {
     // Setup
     let post_interface;
     before(() => {
-        const db = create_test_db();
-        post_interface = new PostInterface(db, "posts-interface");
+        db_initializer.run();
+        post_interface = new PostInterface(db_initializer.db, "posts-interface");
 
         // dummify the logger
         post_interface.logger = logger;
@@ -111,27 +218,28 @@ describe("PostInterface", async (t) => {
 
     // Tests here
     let init_post_id;
-    it("creates posts", () => {
-        const post_data = post_interface.create_post({
+    it("creates posts", async () => {
+        const post_data = await post_interface.create_post({
             author: "Thomas Noel",
-            content: "I love Susannah!!!",
+            content: "<strong>I love Susannah!!!</strong>",
+            md_path: "views/posts/test/test1.md",
             categories: ["Love", "Family"]
         });
 
         assert.strictEqual(post_data.success, true);
-        assert.strictEqual(post_data.data.content, "I love Susannah!!!");
-
+        assert.strictEqual(post_data.data.content, "<strong>I love Susannah!!!</strong>")
         init_post_id = post_data.data.id;
 
         const alt_pd = post_interface.get_post_by_id(post_data.data.id);
-        assert.strictEqual(alt_pd.data.content, "I love Susannah!!!");
+        assert.strictEqual(alt_pd.data.content, "<strong>I love Susannah!!!</strong>");
     });
 
     let child_id;
-    it("can associate post with a parent", () => {
-        const next_post_data = post_interface.create_post({
+    it("can associate post with a parent", async () => {
+        const next_post_data = await post_interface.create_post({
             author: "Thomas Noel",
-            content: "I love Ivan too!!!",
+            content: "<em>I love Ivan too!!!</em>",
+            md_path: "views/posts/test/test2.md",
             parent_id: init_post_id,
             categories: ["Love", "Family"]
         });
@@ -145,7 +253,7 @@ describe("PostInterface", async (t) => {
             next_post_data.data.parent
         );
 
-        assert.strictEqual(parent_data.data.content, "I love Susannah!!!");
+        assert.strictEqual(parent_data.data.content, "<strong>I love Susannah!!!</strong>");
     });
 
     it("can get parent associated with a post", () => {
@@ -153,7 +261,7 @@ describe("PostInterface", async (t) => {
 
         assert.strictEqual(parent_data.success, true);
         assert.strictEqual(parent_data.data.id, init_post_id)
-        assert.strictEqual(parent_data.data.content, "I love Susannah!!!");
+        assert.strictEqual(parent_data.data.content, "<strong>I love Susannah!!!</strong>");
 
         // Also get parent data for post that doesn't have a parent and
         // test that the data is an empty object.
@@ -165,10 +273,11 @@ describe("PostInterface", async (t) => {
     });
 
     let aug_id;
-    it("can get posts by author", () => {
-        const aug_data = post_interface.create_post({
+    it("can get posts by author", async () => {
+        const aug_data = await post_interface.create_post({
             author: "St. Augustine",
-            content: "ordo amoris",
+            content: "<em>ordo</em> amoris",
+            md_path: "views/posts/test/test3.md",
             categories: ["Love", "Theology"]
         });
 
@@ -197,9 +306,10 @@ describe("PostInterface", async (t) => {
         // Wait a bit
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        post_interface.create_post({
+        await post_interface.create_post({
             author: "Ivan Noel",
-            content: "big big excavator move the dirt",
+            content: "<strong>big big excavator move the dirt</strong>",
+            md_path: "views/posts/test/test4.md",
             categories: ["Construction", "Love"]
         });
 
@@ -233,13 +343,14 @@ describe("PostInterface", async (t) => {
 
     let split_ts;
     it("can update existing posts", async () => {
-        const aug_data = post_interface.create_post({
+        const aug_data = await post_interface.create_post({
             author: "St. Augustine",
-            content: "ordo amoris",
+            content: "<em>ordo</em> amoris",
+            md_path: "views/posts/test/test3.md",
             categories: ["Love", "Theology"]
         });
 
-        assert.strictEqual(aug_data.data.content, "ordo amoris");
+        assert.strictEqual(aug_data.data.content, "<em>ordo</em> amoris");
 
         const original_last_updated_ts = aug_data.data.last_updated_unix_sec;
 
@@ -248,13 +359,14 @@ describe("PostInterface", async (t) => {
 
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        const updated_data = post_interface.update_post(
+        const updated_data = await post_interface.update_post(
             aug_data.data.id,
-            "ordered loves"
+            "views/posts/test/test5.md",
+            "<em>ordered</em> loves"
         );
 
         assert.strictEqual(updated_data.success, true);
-        assert.strictEqual(updated_data.data.content, "ordered loves");
+        assert.strictEqual(updated_data.data.content, "<em>ordered</em> loves");
 
         const updated_ts = updated_data.data.last_updated_unix_sec;
         assert.notStrictEqual(original_last_updated_ts, updated_ts);
@@ -267,7 +379,7 @@ describe("PostInterface", async (t) => {
         assert.strictEqual(recently_updated.success, true);
         assert.strictEqual(recently_updated.data.length, 1);
         assert.strictEqual(recently_updated.data[0].id, aug_id);
-        assert.strictEqual(recently_updated.data[0].content, "ordered loves");
+        assert.strictEqual(recently_updated.data[0].content, "<em>ordered</em> loves");
     });
 
     it("can get posts last updated before ts", () => {

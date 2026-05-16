@@ -39,19 +39,25 @@
                 the server and refresh the browser and it should show up.
             - [ ] Write test post tracer.
                 - [x] Implement asset serving in public directory (w/ security)
-                - [ ] Change db schema to incorporate `.md` checksums and
+                - [x] Change db schema to incorporate `.md` checksums and
                 relative `.md` path into posts table.
-                    - [ ] TODO: Update PostInterface accordingly
+                    - [x] Add checksum comp. (`lib/compute_checksum.js`)
+                    - [x] Update PostInterface accordingly
+                        - [x] Update `create_post()`
+                        - [x] Update `update_post()`
+                    - [x] Update posts.test.js and comments.test.js accordingly
                 - [ ] Implement `views/posts` directory scan-and-ingest
                     - [ ] Iterate through directory and scrutinize checksum
                     for posts already existing in db, and if post is updated
                     translate to html and ingest into `content` column. If post
                     is _new_, compute checksum, translate into `.html` and 
                     ingest checksum and `.html` into new row in posts.
-                        - [ ] canned `.md` to `.html` transpiler 
-                        or roll-your-own?
-                - [ ] render post with assets in it (e.g. photos)
-                - [ ] render post with math in it
+                        - [ ] Finish `synchronize_posts()` method in
+                        `PostSyncer`.
+                            - [ ] canned `.md` to `.html` transpiler 
+                            or roll-your-own?
+                - [ ] render post html with assets in it (e.g. photos)
+                - [ ] render post html with math in it
     - [ ] Package up Controller logic into `controllers/index.js`
 - [ ] Views (html templates)
     - [x] Finish writing `load_home()` in ServiceInterface.js 

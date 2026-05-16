@@ -7,12 +7,10 @@
 const env = require('./env.js');
 const app = require('./controller')
 
-const http = require('http');
-
 const run = async () => {
     // Pass the environment to the controller
     app.controller.configure(env);
-    app.controller.start();
+    await app.controller.start();
 };
 
 const shutdown = (signal) => {

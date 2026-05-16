@@ -1,14 +1,18 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const { constants } = require("node:fs");
+
 const LoggedEntity = require("../lib/LoggedEntity");
+const PostSyncer = require("./PostSyncer");
 
 class ServiceInterface extends LoggedEntity {
     #db_interface;
+    #post_syncer;
 
     constructor(db_interface) {
         super("service-interface");
         this.#db_interface = db_interface;
+        this.#post_syncer = new PostSyncer(db_interface);
     }
 
     async _file_exists(path) {
@@ -45,6 +49,14 @@ class ServiceInterface extends LoggedEntity {
         }
 
         return asset;
+    }
+
+    /**
+     * Synchronize posts currently in database with the posts present in 
+     * views/posts.
+     */
+    async synchronize_posts() {
+        await this.#post_syncer.synchronize_posts();
     }
 }
 
