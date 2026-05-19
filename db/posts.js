@@ -267,6 +267,21 @@ class PostInterface extends LoggedEntity {
         return { success, data, message };
     }
 
+    get_post_ids() {
+        // No need for DISTINCT since id is primary key
+        const data = this.#db.prepare(
+            `SELECT id FROM posts ORDER BY id ASC`
+        ).all().map((obj) => obj.id);
+
+        let message = `Successfully retrieved ${data.length} post ids`;
+        let success = true;
+        if (data.length === 0) {
+            message = `Couldn't find any post ids`;
+        }
+
+        return { success, data, message };
+    }
+
     get_parent_of(id) {
         const child_post = this.get_post_by_id(id);
 

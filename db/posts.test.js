@@ -296,6 +296,15 @@ describe("PostInterface", async (t) => {
         aug_id = aug_data.data.id;
     });
 
+    it("can get post ids", () => {
+        const post_ids = post_interface.get_post_ids();
+
+        assert.strictEqual(post_ids.data.length, 3);
+        assert.strictEqual(post_ids.data.includes(1), true);
+        assert.strictEqual(post_ids.data.includes(2), true);
+        assert.strictEqual(post_ids.data.includes(3), true);
+    });
+
     let init_ts;
     it("can get posts created after specified ts", async () => {
         // Make sure we generate a timestamp that is newer than that
