@@ -20,6 +20,15 @@ class MarkdownHashingError extends Error {
     }
 }
 
+class InvalidParentError extends Error {
+    constructor(message, md_path, parent_id) {
+        super(message);
+        this.name = "InvalidParentError";
+        this.md_path = md_path;
+        this.parent_id = parent_id;
+    }
+}
+
 /**
  * Posts are html strings (MathML for math rendering), a date, an author,
  * and one or more categories. 
@@ -36,6 +45,8 @@ class PostInterface extends LoggedEntity {
     }
 
     associate_categories(post_id, categories) {
+        if (categories.length === 0) return;
+
         const stmt = this.#db.prepare(`
             INSERT INTO post_categories (post_id, category) VALUES (?, ?)
         `);
@@ -46,14 +57,25 @@ class PostInterface extends LoggedEntity {
             });
 
             categorize_post(categories);
-        } catch (error) {
+        } catch (err) {
             throw new CategoryAssociationError(
                 "Failed to associate categories with post",
                 post_id,
                 categories,
-                error
+                err
             );
         }
+    }
+
+    /**
+     * Clear all categories associated with specified post.
+     */
+    clear_categories(post_id) {
+        const stmt = this.#db.prepare(`
+            DELETE FROM post_categories WHERE post_id = ?
+        `);
+
+        stmt.run(post_id);
     }
 
     /**
@@ -62,7 +84,7 @@ class PostInterface extends LoggedEntity {
     async create_post({ author, content, md_path, parent_id, categories } = {}) {
         let message;
         if (!author || !content || !md_path) {
-            message = `Failed to create post: must specify author, ` + 
+            message = `Failed to create post: must specify author, ` +
                 `content, and md_path`;
             this.logger.error(message);
             return {
@@ -86,10 +108,10 @@ class PostInterface extends LoggedEntity {
                 md_path,
                 err
             );
-        }  
+        }
 
         // At creation, last_updated ts === creation ts
-        let cols = `ts_unix_sec, last_updated_unix_sec, ` + 
+        let cols = `ts_unix_sec, last_updated_unix_sec, ` +
             `author, content, md_path, md_checksum`;
         const args = [
             ts_unix_sec,
@@ -102,7 +124,7 @@ class PostInterface extends LoggedEntity {
 
         // If parent_id has been stipulated make sure that it gets inserted
         if (parent_id) {
-            cols += `, parent`; 
+            cols += `, parent`;
             args.push(+parent_id);
         }
 
@@ -120,7 +142,7 @@ class PostInterface extends LoggedEntity {
             message = "Failed to write post to database";
             this.logger.error(message);
             success = false;
-        } 
+        }
 
         // If write successful, get row data for return
         if (success) {
@@ -295,7 +317,7 @@ class PostInterface extends LoggedEntity {
 
         let data = {};
         if (success) {
-            data = this.get_post_by_id(child_post.data.parent).data; 
+            data = this.get_post_by_id(child_post.data.parent).data;
         }
 
         return { success, data, message };
@@ -313,9 +335,9 @@ class PostInterface extends LoggedEntity {
             message = `Failed to delete post ${id} from database`;
             this.logger.error(message);
             success = false;
-        } 
+        }
 
-        return { 
+        return {
             success: success,
             data: {},
             message: message
@@ -328,13 +350,22 @@ class PostInterface extends LoggedEntity {
      * @param {Number} id - the post id
      * @param {String} md_path - path to the post markdown file
      * @param {String} updated_content - transpiled post html
+     * @param {String} updated_author - author associated with updated post
+     * @param {Number} parent_id - the id of the parent post
+     * @param {Array} categories - post categories
      *
      * @returns {Object} the updated post object
      */
-    async update_post(id, md_path, updated_content) {
-        if (!id || !md_path || !updated_content) {
-            message = `Failed to update post: must specify id, ` + 
-                `md_path, and updated_content`;
+    async update_post(
+        id,
+        md_path,
+        updated_content,
+        updated_author,
+        parent_id,
+        categories
+    ) {
+        if (!id || !md_path) {
+            message = `Failed to update post: must specify id and md_path`;
             this.logger.error(message);
             return {
                 success: false,
@@ -355,19 +386,42 @@ class PostInterface extends LoggedEntity {
                 md_path,
                 err
             );
-        }  
+        }
 
-        const stmt = this.#db.prepare(`
-            UPDATE posts SET md_path = ?, md_checksum = ?, content = ?, 
-                last_updated_unix_sec = ? WHERE id = ?
-        `);
-        const info = stmt.run(
+        if (parent_id !== null && parent_id !== undefined) {
+            parent_post = await this.get_post_by_id(parent_id);
+            if (!parent_post.success) {
+                this.logger.error(`Invalid parent_id specified: ${parent_id}`);
+                throw new InvalidParentError(
+                    "Specified parent post doesn't exist",
+                    md_path,
+                    parent_id
+                );
+            }
+        }
+
+        // At creation, last_updated ts === creation ts
+        let cols = `md_path = ?, md_checksum = ?, content = ?, ` +
+            `author = ?, last_updated_unix_sec = ?`;
+        const args = [
             md_path,
             md_checksum,
             updated_content,
-            last_updated_unix_sec,
-            id
-        );
+            updated_author,
+            last_updated_unix_sec
+        ];
+
+        // If parent_id has been stipulated make sure that it gets inserted
+        if (parent_id) {
+            cols += `, parent = ?`;
+            args.push(+parent_id);
+        }
+
+        const stmt = this.#db.prepare(`
+            UPDATE posts SET ${cols} WHERE id = ?
+        `);
+
+        const info = stmt.run([...args, id]);
 
         let success = true;
         let message = `Successfully updated post ${id}`;
@@ -380,6 +434,11 @@ class PostInterface extends LoggedEntity {
 
         // collect updated data
         if (success) {
+            if (categories && categories.length > 0) { 
+                this.clear_categories(id);
+                this.associate_categories(id, categories);
+            }
+
             data = this.get_post_by_id(id).data;
         }
 
