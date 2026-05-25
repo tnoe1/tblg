@@ -79,6 +79,26 @@ class PostInterface extends LoggedEntity {
     }
 
     /**
+     * Get all categories associated with specified post.
+     */
+    get_associated_categories(post_id) {
+        const stmt = this.#db.prepare(
+            `SELECT category FROM post_categories WHERE post_id = ?`
+        );
+        const data = stmt.all(post_id).map((obj) => obj.category);
+
+        let message = `Successfully retrieved ${data.length} categories ` +
+            `associated with post id ${post_id}`;
+        let success = true;
+        if (data.length === 0) {
+            message = `Couldn't find any categories associated with ` + 
+                `post ${post_id}`;
+        }
+
+        return { success, data, message };
+    }
+
+    /**
      * Create a post. Assumes that `content` is pre-transpiled .html (from .md).
      */
     async create_post({ author, content, md_path, parent_id, categories } = {}) {

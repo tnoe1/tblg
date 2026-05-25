@@ -20,6 +20,8 @@ class MissingAttributionError extends Error {
 class PostSyncer extends LoggedEntity {
     #db_interface;
 
+    static get POST_PATH() { return "views/posts"; }
+
     constructor(db_interface) {
         super("post-syncer");
 
@@ -29,7 +31,7 @@ class PostSyncer extends LoggedEntity {
 
     async _get_db_checksum_map() {
         const res = this.#db_interface.posts.get_post_ids();
-        
+
         if (!res.success) {
             const error_message = `Failed to retrieve post ids`;
             this.logger.error(error_message);
@@ -39,7 +41,7 @@ class PostSyncer extends LoggedEntity {
         let entries = [];
         for (const id of res.data) {
             let post = this.#db_interface.posts.get_post_by_id(id).data;
-            entries.push([post.md_path, { 
+            entries.push([post.md_path, {
                 id: id,
                 checksum: post.md_checksum
             }]);
@@ -49,16 +51,20 @@ class PostSyncer extends LoggedEntity {
     }
 
     async _get_file_checksum_map() {
-        const POST_PATH = "views/posts";
-
-        const entries = await fs.readdir(POST_PATH, { withFileTypes: true });
+        const entries = await fs.readdir(
+            PostSyncer.POST_PATH,
+            { withFileTypes: true }
+        );
         const files = entries.filter((e) => e.isFile());
-        const paths = files.map((f) => path.join(POST_PATH, f.name));
+        const paths = files.map((f) => path.join(
+            PostSyncer.POST_PATH,
+            f.name
+        ));
         const checksums = await Promise.all(
             paths.map((p) => compute_checksum(p))
         );
 
-        return  Object.fromEntries(
+        return Object.fromEntries(
             paths.map((p, idx) => [p, checksums[idx]])
         );
     }
@@ -68,14 +74,16 @@ class PostSyncer extends LoggedEntity {
         const disk_paths = new Set(Object.keys(file_checksum_map));
         const db_paths = new Set(Object.keys(db_checksum_map));
 
-        const only_in_db = Object.keys(db_checksum_map).filter(
-            (x) => !disk_paths.has(x)
-        );
         const only_on_disk = Object.keys(file_checksum_map).filter(
             (x) => !db_paths.has(x)
         );
         const in_both = Object.keys(db_checksum_map).filter(
             (x) => disk_paths.has(x)
+        );
+
+        // Entries instead of just array of keys
+        const only_in_db = Object.entries(db_checksum_map).filter(
+            (e) => !disk_paths.has(e[0])
         );
 
         return { only_in_db, only_on_disk, in_both };
@@ -101,16 +109,18 @@ class PostSyncer extends LoggedEntity {
 
                 switch (tag) {
                     case "author":
-                        author = tl.split(" ").slice(1).join(" "); 
-                        this.logger.info(`\tauthor: ${author}`);
+                        author = tl.split(" ").slice(1).join(" ");
+                        this.logger.info(`    author: ${author}`);
                         break;
                     case "parent":
                         parent_id = +(tl.split(" ").slice(1));
-                        this.logger.info(`\tparent_id: ${parent_id}`);
+                        this.logger.info(`    parent_id: ${parent_id}`);
                         break;
                     case "categories":
-                        categories = JSON.parse(tl.split(" ").slice(1));
-                        this.logger.info(`\tcategories: ${categories}`);
+                        categories = JSON.parse(
+                            tl.split(" ").slice(1).join(" ")
+                        );
+                        this.logger.info(`    categories: ${categories}`);
                         break;
                     default:
                         this.logger.warning(
@@ -133,7 +143,7 @@ class PostSyncer extends LoggedEntity {
             }
 
         } catch (err) {
-            this.logger.error(`Failed to preprocess md at ${md}: ${err}`);
+            this.logger.error(`Failed to preprocess md at ${md_path}: ${err}`);
         }
 
         return {
@@ -142,6 +152,129 @@ class PostSyncer extends LoggedEntity {
             parent_id: parent_id,
             categories: categories
         };
+    }
+
+    _get_header_string(author, parent_id, categories) {
+        let headers = { author };
+
+        if (parent_id !== null) headers.parent = parent_id;
+        if (categories.length > 0) headers.categories = categories;
+
+        let header_parts = [];
+        for (const [h_name, value] of Object.entries(headers)) {
+            header_parts.push(`@!${h_name} ${value}`);
+        }
+
+        return header_parts.join('\n');
+    }
+
+    async _update_desynced_post(post_id, md_path) {
+        let md = null;
+        let author = null;
+        let parent_id = null;
+        let categories = [];
+        try {
+            let post_info = await this._preprocess_post(md_path);
+            md = post_info.post;
+            author = post_info.author;
+            parent_id = post_info.parent_id;
+            categories = post_info.categories;
+        } catch (err) {
+            this.logger.error(`Failed to update md at ${md_path}: ${err}`);
+            return;
+        }
+
+        let post_html = await this.transpiler.md_to_html(md);
+
+        let res = await this.#db_interface.posts.update_post(
+            db_checksum_map[p].id,
+            md_path,
+            post_html,
+            author,
+            parent_id,
+            categories
+        );
+
+        if (!res.success) this.logger.error(
+            `Failed to update post ${post_id} at ${md_path}: ${res.message}`
+        );
+    }
+
+    async _create_new_post_from_md(md_path) {
+        let md = null;
+        let author = null;
+        let parent_id = null;
+        let categories = [];
+        try {
+            let post_info = await this._preprocess_post(md_path);
+            md = post_info.post;
+            author = post_info.author;
+            parent_id = post_info.parent_id;
+            categories = post_info.categories;
+        } catch (err) {
+            this.logger.error(`Failed to create md at ${md_path}: ${err}`);
+            return;
+        }
+
+        let post_html = await this.transpiler.md_to_html(md);
+
+        let res = await this.#db_interface.posts.create_post({
+            author: author,
+            content: post_html,
+            md_path: md_path,
+            parent_id: parent_id,
+            categories: categories
+        });
+
+        if (res.success) {
+            this.logger.info(
+                `Post at ${md_path} added to database with id ${res.data.id}`
+            );
+        } else {
+            this.logger.info(
+                `Failed to add post at ${md_path} added to database: ` +
+                `${res.message}`
+            );
+        }
+    }
+
+    async _recover_md_from_html(post_id) {
+        // At this point, we shouldn't have a problem retrieving this, so
+        // it's ok, to just grab .data from the returned object.
+        const post = this.#db_interface.posts.get_post_by_id(post_id).data;
+
+        this.logger.warning(
+            `Couldn't find post markdown file that should be at ` +
+            `${post.md_path}. Attempting to recover md file by reverse ` +
+            `transpiling from html...`
+        );
+
+        let post_md = await this.transpiler.html_to_md(post.content);
+        let categories = this.#db_interface.posts.get_associated_categories(
+            post_id
+        );
+
+        // Compute header string and inject it into markdown
+        let header_string = this._get_header_string(
+            post.author,
+            post.parent,
+            categories
+        );
+        post_md = [header_string, post_md].join('\n');
+
+        try {
+            await fs.writeFile(post.md_path, post_md);
+        } catch (err) {
+            this.logger.error(
+                `Failed to write transpiled content to disk at ` +
+                `${post.md_path}: ${err}`
+            );
+        }
+
+        this.logger.info(
+            `Post md recover from database successful for ` + 
+            `${post.md_path}`
+        );
     }
 
     async synchronize_posts() {
@@ -161,77 +294,29 @@ class PostSyncer extends LoggedEntity {
 
         // Need to:
         //     i)   [x] update desynced
-        //     ii)  [ ] create posts for `only_on_disk`
-        //     iii) [ ] decide what to do for `only_in_db`. I don't know if 
+        //     ii)  [x] create posts for `only_on_disk`
+        //     iii) [x] decide what to do for `only_in_db`. I don't know if 
         //          deletion makes sense here... Probably log a warning and
         //          save the html in a backup directory in the views
         //          folder. Could also look at reverse transpiling.
-        
+
         // Update desynced
         for (const p of desynced) {
-            let post_id = db_checksum_map[p].id;
-
-            let md = null;
-            let author = null;
-            let parent_id = null;
-            let categories = [];
-            try {
-                let post_info = await this._preprocess_post(p);
-                md = post_info.post;
-                author = post_info.author;
-                parent_id = post_info.parent_id;
-                categories = post_info.categories;
-            } catch (err) {
-                this.logger.error(`Failed to update md at ${md_path}: ${err}`);
-                continue;
-            }
-
-            let post_html = await this.transpiler.md_to_html(md);
-
-            let res = await this.#db_interface.update_post(
-                db_checksum_map[p].id,
-                p,
-                post_html,
-                author,
-                parent_id,
-                categories
-            );
-
-            if (!res.success) this.logger.error(
-                `Failed to update post ${post_id} at ${p}: ${res.message}`
-            );
+            await this._update_desynced_post(db_checksum_map[p].id, p);
         }
 
         // Create new posts that are on disk, but not in db
-        for (const p of Object.keys(disjoint_decomp.only_on_disk)) {
-            let md = null;
-            let author = null;
-            let parent_id = null;
-            let categories = null;
-            // TODO: finish this case and add parent_id and categories to 
-            // post creation below.
-            try {
-                let post_info = await this._preprocess_post(p);
-                md = post_info.post;
-                author = post_info.author;
-            } catch (err) {
-                this.logger.error(`Failed to create md at ${md_path}: ${err}`);
-                continue;
-            }
-
-            let results = await this.#db_interface.create_post({
-                author: author,
-                content: md,
-                md_path: p,
-            });
+        for (const p of disjoint_decomp.only_on_disk) {
+            await this._create_new_post_from_md(p);
         }
 
-        // TODO! Iterate through the posts in the db and compute checksums
-        // of the posts at the md_path of each to see if they still match.
-        // If they don't, then update the post with the new transpiled content
-        // and md_checksum.
+        // Recover filesystem markdown from posts that have html content,
+        // but are missing associated markdown.
+        for (const [p, info] of disjoint_decomp.only_in_db) {
+            await this._recover_md_from_html(info.id);
+        }
 
-        console.log(paths, db_md_paths);
+        this.logger.info(`Post synchronization complete`);
     }
 }
 

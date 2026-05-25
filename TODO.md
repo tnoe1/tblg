@@ -47,15 +47,18 @@
                         - [x] Update `update_post()`
                     - [x] Update posts.test.js and comments.test.js accordingly
                 - [ ] Implement `views/posts` directory scan-and-ingest
-                    - [ ] Iterate through directory and scrutinize checksum
+                    - [x] Iterate through directory and scrutinize checksum
                     for posts already existing in db, and if post is updated
                     translate to html and ingest into `content` column. If post
                     is _new_, compute checksum, translate into `.html` and 
                     ingest checksum and `.html` into new row in posts.
-                        - [ ] Finish `synchronize_posts()` method in
+                        - [x] Finish `synchronize_posts()` method in
                         `PostSyncer`.
-                            - [ ] canned `.md` to `.html` transpiler 
-                            or roll-your-own?
+                            - [x] canned `.md` to `.html` transpiler 
+                            or roll-your-own? canned
+                            - [ ] Test updating desynced post
+                            - [ ] Test creating new posts from md on disk
+                            - [ ] Test recovering md from html in db
                 - [ ] render post html with assets in it (e.g. photos)
                 - [ ] render post html with math in it
     - [ ] Package up Controller logic into `controllers/index.js`
