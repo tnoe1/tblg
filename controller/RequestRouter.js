@@ -11,6 +11,7 @@ class RequestRouter extends LoggedEntity {
         super("req-router");
         this.route_map = {
             "/": this.serve_home.bind(this),
+            "/posts": this.serve_post.bind(this),
             "/test": this.test_route.bind(this)
         };
         this.#services = services;
@@ -88,6 +89,33 @@ class RequestRouter extends LoggedEntity {
         };
     }
 
+    async serve_post(req_obj) {
+        const params = req_obj.params;
+        const post_id = +params.post_id;
+
+        const post_html = await this.#services.load_post(post_id);
+
+        if (post_html === null) {
+            return {
+                status: 500,
+                status_message: 'Internal server error',
+                headers: {
+                    'Content-Type': 'text/html; charset=UTF-8'
+                },
+                content: '500: Internal server error'
+            };
+        }
+
+        return {
+            status: 200,
+            status_message: 'OK',
+            headers: {
+                'Content-Type': 'text/html; charset=UTF-8'
+            },
+            content: post_html 
+        };
+    }
+
     _get_asset_content_type(path) {
         const extension = path.split(".").pop().toLowerCase();
 
@@ -101,7 +129,8 @@ class RequestRouter extends LoggedEntity {
             'css': "text/css",
             'svg': "image/svg+xml",
             'xml': "application/xml",
-            'txt': "text/plain"
+            'txt': "text/plain",
+            'ico': "image/x-icon"
         };
 
         return ext_map[extension] ?? null;

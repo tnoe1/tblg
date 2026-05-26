@@ -40,6 +40,29 @@ class ServiceInterface extends LoggedEntity {
         return home_page;
     }
 
+    async load_post(post_id) {
+        const template_path = path.join(
+            __dirname,
+            "../views/rendering/post_template.html"
+        );
+
+        let post_html = null;
+        try {
+            let post = await this.#db_interface.posts.get_post_by_id(post_id);
+            post_html = post.data.content;
+        } catch (err) {
+            this.logger.error(`Failed to load post ${post_id}: ${err}`);
+        }
+
+        let template_html = await fs.readFile(
+            template_path,
+            { encoding: 'utf8' }
+        );
+        let wrapped_post_html = template_html.replace('{{POST_HTML}}', post_html);
+
+        return wrapped_post_html;
+    }
+
     async load_asset(asset_path) {
         let asset = null;
         try {

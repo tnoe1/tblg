@@ -13,7 +13,7 @@
       directory containing html templates.
 - [x] Services (business logic associated with http routes)
     - No-op for now.
-- [ ] Controllers (http routes)
+- [x] Controllers (http routes)
     - http server setup shown in controller.js at the moment. Can ping
       it with a curl request such as:
           ```bash
@@ -23,10 +23,10 @@
           ```
     - [x] Move body stream consolidation into `RequestParser`.
     - [x] Write RequestParser
-    - [ ] Write RequestRouter
+    - [x] Write RequestRouter
         - [x] Write test route
         - [x] Write route for serving home page
-        - [ ] Write route for serving posts
+        - [x] Write route for serving posts
             - [x] How do we write posts? What is the actual workflow?
                 - Content column in posts table should be the html rendering of
                 a .md file in the `views/posts` folder. On startup, the
@@ -37,7 +37,7 @@
                 requested posts will be inserted into the post template and
                 sent to the client. After a new post has been added, restart
                 the server and refresh the browser and it should show up.
-            - [ ] Write test post tracer.
+            - [x] Write test post tracer.
                 - [x] Implement asset serving in public directory (w/ security)
                 - [x] Change db schema to incorporate `.md` checksums and
                 relative `.md` path into posts table.
@@ -46,7 +46,7 @@
                         - [x] Update `create_post()`
                         - [x] Update `update_post()`
                     - [x] Update posts.test.js and comments.test.js accordingly
-                - [ ] Implement `views/posts` directory scan-and-ingest
+                - [x] Implement `views/posts` directory scan-and-ingest
                     - [x] Iterate through directory and scrutinize checksum
                     for posts already existing in db, and if post is updated
                     translate to html and ingest into `content` column. If post
@@ -56,21 +56,31 @@
                         `PostSyncer`.
                             - [x] canned `.md` to `.html` transpiler 
                             or roll-your-own? canned
-                            - [ ] Test updating desynced post
-                            - [ ] Test creating new posts from md on disk
-                            - [ ] Test recovering md from html in db
-                - [ ] render post html with assets in it (e.g. photos)
-                - [ ] render post html with math in it
-    - [ ] Package up Controller logic into `controllers/index.js`
+                            - [x] Test updating desynced post
+                            - [x] Test creating new posts from md on disk
+                            - [x] Test recovering md from html in db
+                                - [x] Fix bug where math isn't recovered 
+                                correctly
+                - [x] render post html with assets in it (e.g. photos)
+                - [x] render post html with math in it
+    - [x] Package up Controller logic into `controllers/index.js`
+- [ ] Add "@!title" tag to metadata parser and title column to posts 
+- [ ] Update tests for posts and comments
 - [ ] Views (html templates)
     - [x] Finish writing `load_home()` in ServiceInterface.js 
           (and `serve_home()` in RequestRouter.js)
     - [x] Figure out view template for posts
-        - Posts will be `.md` files that get parsed into 
-- [ ] Write method that checks the database for posts and uses that to
-      curate list available posts viewable by user.
-    - [ ] Add parser for enabling hidden (in-progress) posts that aren't
-          viewable.
+        - Posts will be `.md` files that get parsed into html
+    - [ ] Figure out site layout
+        - [ ] Polish up home page
+        - [ ] Add post links to home page
+            - [ ] Write method that checks the database for posts and uses that to
+                  curate list available posts viewable by user.
+                - [ ] Add parser for enabling hidden (in-progress) posts that aren't
+                      viewable.
+            - [ ] Make post viewing interface congruent with home (i.e. make
+            website seem consistent across views)
+                - [ ] Polish post template wrapper html for easy navigation
 - [ ] Put TLS (https) concern at infrastructure layer via NGINX
 - [ ] Dockerize
 - [ ] Deploy (AWS?)

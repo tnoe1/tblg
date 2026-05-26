@@ -109,7 +109,7 @@ class PostSyncer extends LoggedEntity {
 
                 switch (tag) {
                     case "author":
-                        author = tl.split(" ").slice(1).join(" ");
+                        author = JSON.parse(tl.split(" ").slice(1).join(" "));
                         this.logger.info(`    author: ${author}`);
                         break;
                     case "parent":
@@ -162,7 +162,7 @@ class PostSyncer extends LoggedEntity {
 
         let header_parts = [];
         for (const [h_name, value] of Object.entries(headers)) {
-            header_parts.push(`@!${h_name} ${value}`);
+            header_parts.push(`@!${h_name} ${JSON.stringify(value)}`);
         }
 
         return header_parts.join('\n');
@@ -258,14 +258,11 @@ class PostSyncer extends LoggedEntity {
             post_id
         );
 
-        // TODO: Figure out why categories aren't being injected in 
-        // this case.
-
         // Compute header string and inject it into markdown
         let header_string = this._get_header_string(
             post.author,
             post.parent,
-            categories
+            categories.data
         );
         post_md = [header_string, post_md].join('\n');
 
@@ -298,14 +295,6 @@ class PostSyncer extends LoggedEntity {
         const desynced = disjoint_decomp.in_both.filter(
             (p) => (db_checksum_map[p].checksum !== file_checksum_map[p])
         );
-
-        // Need to:
-        //     i)   [x] update desynced
-        //     ii)  [x] create posts for `only_on_disk`
-        //     iii) [x] decide what to do for `only_in_db`. I don't know if 
-        //          deletion makes sense here... Probably log a warning and
-        //          save the html in a backup directory in the views
-        //          folder. Could also look at reverse transpiling.
 
         // Update desynced
         for (const p of desynced) {

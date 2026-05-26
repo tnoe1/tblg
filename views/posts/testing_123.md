@@ -1,6 +1,6 @@
-@!author Thomas Noel
+@!author "Thomas Noel"
 @!parent 1
-@!categories ["Fun", "Enjoyable", "Test"]
+@!categories ["enjoyable","fun","test"]
 # Testing 123
 
 *This* isn't a test
