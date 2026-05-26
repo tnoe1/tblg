@@ -169,6 +169,11 @@ class PostSyncer extends LoggedEntity {
     }
 
     async _update_desynced_post(post_id, md_path) {
+        this.logger.info(
+            `Markdown post at ${md_path} has changed since last ` +
+            `sync. Rebuilding and syncing updated post.`
+        );
+
         let md = null;
         let author = null;
         let parent_id = null;
@@ -187,7 +192,7 @@ class PostSyncer extends LoggedEntity {
         let post_html = await this.transpiler.md_to_html(md);
 
         let res = await this.#db_interface.posts.update_post(
-            db_checksum_map[p].id,
+            post_id,
             md_path,
             post_html,
             author,
@@ -243,16 +248,18 @@ class PostSyncer extends LoggedEntity {
         // it's ok, to just grab .data from the returned object.
         const post = this.#db_interface.posts.get_post_by_id(post_id).data;
 
-        this.logger.warning(
+        this.logger.warn(
             `Couldn't find post markdown file that should be at ` +
-            `${post.md_path}. Attempting to recover md file by reverse ` +
-            `transpiling from html...`
+            `${post.md_path}. Attempting to recovering md from db html...`
         );
 
         let post_md = await this.transpiler.html_to_md(post.content);
         let categories = this.#db_interface.posts.get_associated_categories(
             post_id
         );
+
+        // TODO: Figure out why categories aren't being injected in 
+        // this case.
 
         // Compute header string and inject it into markdown
         let header_string = this._get_header_string(
@@ -272,7 +279,7 @@ class PostSyncer extends LoggedEntity {
         }
 
         this.logger.info(
-            `Post md recover from database successful for ` + 
+            `Post markdown recovery from database successful for ` + 
             `${post.md_path}`
         );
     }

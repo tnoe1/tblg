@@ -408,6 +408,7 @@ class PostInterface extends LoggedEntity {
             );
         }
 
+        let parent_post;
         if (parent_id !== null && parent_id !== undefined) {
             parent_post = await this.get_post_by_id(parent_id);
             if (!parent_post.success) {
