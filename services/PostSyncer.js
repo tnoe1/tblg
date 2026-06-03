@@ -5,10 +5,10 @@ const compute_checksum = require("../lib/compute_checksum");
 const LoggedEntity = require("../lib/LoggedEntity");
 const Transpiler = require("../lib/Transpiler");
 
-class MissingAttributionError extends Error {
+class InvalidPostHeadersError extends Error {
     constructor(message, md_path) {
         super(message);
-        this.name = "MissingAttributionError";
+        this.name = "InvalidPostHeadersError";
         this.md_path = md_path;
     }
 }
@@ -94,6 +94,7 @@ class PostSyncer extends LoggedEntity {
 
         let md = null;
         let author = null;
+        let title = null;
         let parent_id = null;
         let categories = [];
         try {
@@ -111,6 +112,10 @@ class PostSyncer extends LoggedEntity {
                     case "author":
                         author = JSON.parse(tl.split(" ").slice(1).join(" "));
                         this.logger.info(`    author: ${author}`);
+                        break;
+                    case "title":
+                        title = JSON.parse(tl.split(" ").slice(1).join(" "));
+                        this.logger.info(`    title: ${title}`);
                         break;
                     case "parent":
                         parent_id = +(tl.split(" ").slice(1));
@@ -133,11 +138,24 @@ class PostSyncer extends LoggedEntity {
             if (author === null) {
                 this.logger.error(
                     `No attribution in post: ${md_path}. Please place ` +
-                    `an @author attribution at top of post file. (e.g. ` +
-                    `"@author Dave Smith")`
+                    `an @!author attribution at top of post file. (e.g. ` +
+                    `'@!author "Dave Smith"')`
                 );
-                throw new MissingAttributionError(
-                    "Missing an @author tag at beginning of post md file",
+                throw new InvalidPostHeadersError(
+                    "Missing an @!author tag at beginning of post md file",
+                    md_path
+                );
+            }
+
+            // Need to specify a title
+            if (title === null) {
+                this.logger.error(
+                    `No title given in post: ${md_path}. Please place ` +
+                    `a @!title tag at top of post file. (e.g. ` +
+                    `'@!title Where is my Hairbrush?')`
+                );
+                throw new InvalidPostHeadersError(
+                    "Missing a @!title tag at beginning of post md file",
                     md_path
                 );
             }
@@ -149,13 +167,14 @@ class PostSyncer extends LoggedEntity {
         return {
             post: md,
             author: author,
+            title: title,
             parent_id: parent_id,
             categories: categories
         };
     }
 
-    _get_header_string(author, parent_id, categories) {
-        let headers = { author };
+    _get_header_string(author, title, parent_id, categories) {
+        let headers = { author, title };
 
         if (parent_id !== null) headers.parent = parent_id;
         if (categories.length > 0) headers.categories = categories;
@@ -176,12 +195,14 @@ class PostSyncer extends LoggedEntity {
 
         let md = null;
         let author = null;
+        let title = null;
         let parent_id = null;
         let categories = [];
         try {
             let post_info = await this._preprocess_post(md_path);
             md = post_info.post;
             author = post_info.author;
+            title = post_info.title;
             parent_id = post_info.parent_id;
             categories = post_info.categories;
         } catch (err) {
@@ -191,13 +212,25 @@ class PostSyncer extends LoggedEntity {
 
         let post_html = await this.transpiler.md_to_html(md);
 
+        // Should always have updated content, updated author, and updated title
+        let updated_data = {
+            updated_content: post_html,
+            updated_author: author,
+            updated_title: title,
+        }
+
+        if (parent_id) {
+            updated_data.parent_id = parent_id;
+        }
+
+        if (categories.length > 0) {
+            updated_data.categories = categories;
+        }
+
         let res = await this.#db_interface.posts.update_post(
             post_id,
             md_path,
-            post_html,
-            author,
-            parent_id,
-            categories
+            updated_data
         );
 
         if (!res.success) this.logger.error(
@@ -208,12 +241,14 @@ class PostSyncer extends LoggedEntity {
     async _create_new_post_from_md(md_path) {
         let md = null;
         let author = null;
+        let title = null;
         let parent_id = null;
         let categories = [];
         try {
             let post_info = await this._preprocess_post(md_path);
             md = post_info.post;
             author = post_info.author;
+            title = post_info.title;
             parent_id = post_info.parent_id;
             categories = post_info.categories;
         } catch (err) {
@@ -225,6 +260,7 @@ class PostSyncer extends LoggedEntity {
 
         let res = await this.#db_interface.posts.create_post({
             author: author,
+            title: title,
             content: post_html,
             md_path: md_path,
             parent_id: parent_id,
@@ -261,6 +297,7 @@ class PostSyncer extends LoggedEntity {
         // Compute header string and inject it into markdown
         let header_string = this._get_header_string(
             post.author,
+            post.title,
             post.parent,
             categories.data
         );

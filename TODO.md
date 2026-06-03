@@ -64,8 +64,13 @@
                 - [x] render post html with assets in it (e.g. photos)
                 - [x] render post html with math in it
     - [x] Package up Controller logic into `controllers/index.js`
-- [ ] Add "@!title" tag to metadata parser and title column to posts 
-- [ ] Update tests for posts and comments
+- [x] Add "@!title" tag to metadata parser and title column to posts 
+    - [x] Add to parser
+    - [x] Add to schema
+    - [x] Add to PostInterface
+        - [x] Make every item in `update_post` other than id and `md_path`
+        truly optional.
+- [x] Update tests for posts and comments
 - [ ] Views (html templates)
     - [x] Finish writing `load_home()` in ServiceInterface.js 
           (and `serve_home()` in RequestRouter.js)

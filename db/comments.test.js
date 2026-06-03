@@ -231,6 +231,7 @@ describe("CommentInterface", async (t) => {
     it("creates comments", async () => {
         const post_data = await post_interface.create_post({
             author: "Thomas Noel",
+            title: "My Favorite",
             content: "<strong>I love Susannah!!!</strong>",
             md_path: "views/posts/test/test1.md",
             categories: ["Love", "Family"]

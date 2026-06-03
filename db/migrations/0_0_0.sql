@@ -27,6 +27,7 @@ CREATE TABLE posts (
         STRFTIME('%Y-%m-%dT%H:%M:%SZ', ts_unix_sec, 'unixepoch')
     ) VIRTUAL,
     author TEXT NOT NULL,
+    title TEXT NOT NULL,
     md_path TEXT NOT NULL,
     md_checksum TEXT NOT NULL,
     content TEXT NOT NULL, -- Most recent rendered .html goes here
@@ -73,3 +74,4 @@ CREATE TABLE comments (
 );
 CREATE INDEX idx_comments_user_id ON comments(user_id);
 CREATE INDEX idx_comments_post_id ON comments(post_id);
+

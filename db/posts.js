@@ -30,8 +30,8 @@ class InvalidParentError extends Error {
 }
 
 /**
- * Posts are html strings (MathML for math rendering), a date, an author,
- * and one or more categories. 
+ * Posts are html strings (MathML for math rendering), a date, an author, a
+ * title, and one or more categories. 
  * Any logic related to posts gets encapsulated here.
  *
  */
@@ -101,10 +101,10 @@ class PostInterface extends LoggedEntity {
     /**
      * Create a post. Assumes that `content` is pre-transpiled .html (from .md).
      */
-    async create_post({ author, content, md_path, parent_id, categories } = {}) {
+    async create_post({ author, title, content, md_path, parent_id, categories } = {}) {
         let message;
-        if (!author || !content || !md_path) {
-            message = `Failed to create post: must specify author, ` +
+        if (!author || !title || !content || !md_path) {
+            message = `Failed to create post: must specify author, title, ` +
                 `content, and md_path`;
             this.logger.error(message);
             return {
@@ -132,11 +132,12 @@ class PostInterface extends LoggedEntity {
 
         // At creation, last_updated ts === creation ts
         let cols = `ts_unix_sec, last_updated_unix_sec, ` +
-            `author, content, md_path, md_checksum`;
+            `author, title, content, md_path, md_checksum`;
         const args = [
             ts_unix_sec,
             ts_unix_sec,
             author,
+            title,
             content,
             md_path,
             md_checksum
@@ -371,6 +372,7 @@ class PostInterface extends LoggedEntity {
      * @param {String} md_path - path to the post markdown file
      * @param {String} updated_content - transpiled post html
      * @param {String} updated_author - author associated with updated post
+     * @param {String} updated_title - title associated with updated post
      * @param {Number} parent_id - the id of the parent post
      * @param {Array} categories - post categories
      *
@@ -379,10 +381,13 @@ class PostInterface extends LoggedEntity {
     async update_post(
         id,
         md_path,
-        updated_content,
-        updated_author,
-        parent_id,
-        categories
+        {
+            updated_content,
+            updated_author,
+            updated_title,
+            parent_id,
+            categories
+        } = {}
     ) {
         if (!id || !md_path) {
             message = `Failed to update post: must specify id and md_path`;
@@ -422,17 +427,30 @@ class PostInterface extends LoggedEntity {
         }
 
         // At creation, last_updated ts === creation ts
-        let cols = `md_path = ?, md_checksum = ?, content = ?, ` +
-            `author = ?, last_updated_unix_sec = ?`;
+        let cols = `md_path = ?, md_checksum = ?, last_updated_unix_sec = ?`;
         const args = [
             md_path,
             md_checksum,
-            updated_content,
-            updated_author,
             last_updated_unix_sec
         ];
 
-        // If parent_id has been stipulated make sure that it gets inserted
+        // Make sure to include update items that have been stipulated
+        if (updated_content) {
+            cols += `, content = ?`;
+            args.push(updated_content);
+        }
+
+        if (updated_author) {
+            cols += `, author = ?`;
+            args.push(updated_author);
+        }
+
+        if (updated_title) {
+            cols += `, title = ?`;
+            args.push(updated_title);
+        }
+
+        // Can technically have id 0 in sqlite, but we're ignoring that here
         if (parent_id) {
             cols += `, parent = ?`;
             args.push(+parent_id);

@@ -221,6 +221,7 @@ describe("PostInterface", async (t) => {
     it("creates posts", async () => {
         const post_data = await post_interface.create_post({
             author: "Thomas Noel",
+            title: "My Favorite",
             content: "<strong>I love Susannah!!!</strong>",
             md_path: "views/posts/test/test1.md",
             categories: ["Love", "Family"]
@@ -238,6 +239,7 @@ describe("PostInterface", async (t) => {
     it("can associate post with a parent", async () => {
         const next_post_data = await post_interface.create_post({
             author: "Thomas Noel",
+            title: "My Other Favorite",
             content: "<em>I love Ivan too!!!</em>",
             md_path: "views/posts/test/test2.md",
             parent_id: init_post_id,
@@ -276,6 +278,7 @@ describe("PostInterface", async (t) => {
     it("can get posts by author", async () => {
         const aug_data = await post_interface.create_post({
             author: "St. Augustine",
+            title: "In Latin",
             content: "<em>ordo</em> amoris",
             md_path: "views/posts/test/test3.md",
             categories: ["Love", "Theology"]
@@ -289,6 +292,7 @@ describe("PostInterface", async (t) => {
 
         const aug_posts = post_interface.get_posts_by_author("St. Augustine");
         assert.strictEqual(aug_posts.data.length, 1);
+        assert.strictEqual(aug_posts.data[0].title, "In Latin");
         aug_posts.data.forEach((p) => {
             assert.strictEqual(p.author, "St. Augustine");
         });
@@ -317,6 +321,7 @@ describe("PostInterface", async (t) => {
 
         await post_interface.create_post({
             author: "Ivan Noel",
+            title: "Excavators",
             content: "<strong>big big excavator move the dirt</strong>",
             md_path: "views/posts/test/test4.md",
             categories: ["Construction", "Love"]
@@ -354,6 +359,7 @@ describe("PostInterface", async (t) => {
     it("can update existing posts", async () => {
         const aug_data = await post_interface.create_post({
             author: "St. Augustine",
+            title: "In Latin", 
             content: "<em>ordo</em> amoris",
             md_path: "views/posts/test/test3.md",
             categories: ["Love", "Theology"]
@@ -371,11 +377,16 @@ describe("PostInterface", async (t) => {
         const updated_data = await post_interface.update_post(
             aug_data.data.id,
             "views/posts/test/test5.md",
-            "<em>ordered</em> loves"
+            {
+                updated_content: "<em>ordered</em> loves",
+                updated_title: "In English"
+            }
         );
 
         assert.strictEqual(updated_data.success, true);
         assert.strictEqual(updated_data.data.content, "<em>ordered</em> loves");
+        assert.strictEqual(updated_data.data.title, "In English");
+        assert.strictEqual(updated_data.data.author, "St. Augustine");
 
         const updated_ts = updated_data.data.last_updated_unix_sec;
         assert.notStrictEqual(original_last_updated_ts, updated_ts);
