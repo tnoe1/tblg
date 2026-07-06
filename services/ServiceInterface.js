@@ -47,9 +47,13 @@ class ServiceInterface extends LoggedEntity {
         );
 
         let post_html = null;
+        let post_title = null;
+        let post_meta_description = null;
         try {
             let post = await this.#db_interface.posts.get_post_by_id(post_id);
             post_html = post.data.content;
+            post_title = post.data.title;
+            post_meta_description = post.data.meta_description;
         } catch (err) {
             this.logger.error(`Failed to load post ${post_id}: ${err}`);
         }
@@ -58,7 +62,9 @@ class ServiceInterface extends LoggedEntity {
             template_path,
             { encoding: 'utf8' }
         );
-        let wrapped_post_html = template_html.replace('{{POST_HTML}}', post_html);
+        let wrapped_post_html = template_html.replaceAll('{{POST_HTML}}', post_html)
+            .replaceAll('{{POST_TITLE}}', post_title)
+            .replaceAll('{{META_DESC}}', post_meta_description);
 
         return wrapped_post_html;
     }

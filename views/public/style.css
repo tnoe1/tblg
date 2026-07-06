@@ -1,3 +1,31 @@
-#header-container {
-    font-size: 80px;
+#master-container {
+    display: grid;
+    width: 100vw;
+    min-height: 100vh;
+}
+
+#page-container {
+    display: grid;
+    grid-template-rows: 12.5% auto;
+    outline: 3px solid red;
+    margin: 100px;
+}
+
+#logo-header-container {
+    display: grid;
+    grid-template-columns: 20% auto;
+    outline: 3px solid green;
+}
+
+#nav-content-footer-container {
+    display: grid;
+    grid-template-columns: 20% auto;
+    outline: 3px solid green;
+    height: stretch;
+}
+
+#content-footer-container {
+    display: grid;
+    grid-template-rows: 95% auto;
+    outline: 3px solid yellow;
 }

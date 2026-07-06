@@ -79,9 +79,10 @@
           (and `serve_home()` in RequestRouter.js)
     - [x] Figure out view template for posts
         - Posts will be `.md` files that get parsed into html
-    - [ ] Inject meta-description into html
+    - [x] Inject meta-description into html
     - [ ] Figure out site layout
         - [ ] Polish up home page
+        - [ ] Create site logo
         - [ ] Add post links to home page
             - [ ] Write method that checks the database for posts and uses that to
                   curate list available posts viewable by user.
@@ -90,6 +91,8 @@
             - [ ] Make post viewing interface congruent with home (i.e. make
             website seem consistent across views)
                 - [ ] Polish post template wrapper html for easy navigation
+    - [ ] Add `IMAGE_URL` to `load_post` and `post_template`
+    - [ ] Make mobile friendly and add media queries adjusting for screen wideness
 - [ ] Put TLS (https) concern at infrastructure layer via NGINX
 - [ ] Dockerize
 - [ ] Deploy (AWS?)
