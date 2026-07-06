@@ -13,7 +13,6 @@ CREATE TABLE versions (
 INSERT INTO versions(major, minor, patch, description)
     VALUES(0, 0, 0, 'Initial version');
 
-
 -- A post has an id, a timestamp, an author, a content string (html), 
 -- a list of categories (these actually get referenced from the 
 -- post_categories table), and a backward reference. 
@@ -30,6 +29,7 @@ CREATE TABLE posts (
     title TEXT NOT NULL,
     md_path TEXT NOT NULL,
     md_checksum TEXT NOT NULL,
+    meta_description TEXT NOT NULL,
     content TEXT NOT NULL, -- Most recent rendered .html goes here
     last_updated_unix_sec INTEGER NOT NULL,
     last_updated_readable TEXT GENERATED ALWAYS AS (

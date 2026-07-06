@@ -101,11 +101,11 @@ class PostInterface extends LoggedEntity {
     /**
      * Create a post. Assumes that `content` is pre-transpiled .html (from .md).
      */
-    async create_post({ author, title, content, md_path, parent_id, categories } = {}) {
+    async create_post({ author, title, content, md_path, meta_description, parent_id, categories } = {}) {
         let message;
-        if (!author || !title || !content || !md_path) {
+        if (!author || !title || !content || !md_path || !meta_description) {
             message = `Failed to create post: must specify author, title, ` +
-                `content, and md_path`;
+                `content, md_path, and meta_description.`;
             this.logger.error(message);
             return {
                 success: false,
@@ -132,7 +132,7 @@ class PostInterface extends LoggedEntity {
 
         // At creation, last_updated ts === creation ts
         let cols = `ts_unix_sec, last_updated_unix_sec, ` +
-            `author, title, content, md_path, md_checksum`;
+            `author, title, content, md_path, md_checksum, meta_description`;
         const args = [
             ts_unix_sec,
             ts_unix_sec,
@@ -140,7 +140,8 @@ class PostInterface extends LoggedEntity {
             title,
             content,
             md_path,
-            md_checksum
+            md_checksum,
+            meta_description
         ];
 
         // If parent_id has been stipulated make sure that it gets inserted
@@ -373,6 +374,7 @@ class PostInterface extends LoggedEntity {
      * @param {String} updated_content - transpiled post html
      * @param {String} updated_author - author associated with updated post
      * @param {String} updated_title - title associated with updated post
+     * @param {String} updated_meta_description - post description for html
      * @param {Number} parent_id - the id of the parent post
      * @param {Array} categories - post categories
      *
@@ -385,6 +387,7 @@ class PostInterface extends LoggedEntity {
             updated_content,
             updated_author,
             updated_title,
+            updated_meta_description,
             parent_id,
             categories
         } = {}
@@ -448,6 +451,11 @@ class PostInterface extends LoggedEntity {
         if (updated_title) {
             cols += `, title = ?`;
             args.push(updated_title);
+        }
+
+        if (updated_meta_description) {
+            cols += `, meta_description = ?`;
+            args.push(updated_meta_description);
         }
 
         // Can technically have id 0 in sqlite, but we're ignoring that here

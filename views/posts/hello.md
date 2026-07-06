@@ -1,7 +1,8 @@
 @!author "Thomas Noel"
 @!title "Greetings"
 @!categories ["greeting","second","test"]
-# Hello, Everybody
+@!meta_description "An example 'hello world' post by Thomas Noel that takes advanced features like image and math embedding for a spin."
+## Hello, Everybody
 
 Welcome to my *second* post. It contains **important** information
 

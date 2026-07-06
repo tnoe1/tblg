@@ -4,7 +4,15 @@
     <meta charset="UTF-8">
     <title>tblg</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.x/dist/katex.min.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 
-<body>{{POST_HTML}}</body>
+<body>
+    <div id="master-container">
+        <div id="logo-container"></div>
+        <div id="header-container">Thom Noel's Blog</div>
+        <div id="nav-container"></div>
+        <div id="content-container">{{POST_HTML}}</div>
+    </div>
+</body>
 </html>

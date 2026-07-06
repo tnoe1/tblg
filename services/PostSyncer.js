@@ -95,6 +95,7 @@ class PostSyncer extends LoggedEntity {
         let md = null;
         let author = null;
         let title = null;
+        let meta_description = null;
         let parent_id = null;
         let categories = [];
         try {
@@ -116,6 +117,10 @@ class PostSyncer extends LoggedEntity {
                     case "title":
                         title = JSON.parse(tl.split(" ").slice(1).join(" "));
                         this.logger.info(`    title: ${title}`);
+                        break;
+                    case "meta_description":
+                        meta_description = JSON.parse(tl.split(" ").slice(1).join(" "));
+                        this.logger.info(`    meta_description: ${meta_description}`);
                         break;
                     case "parent":
                         parent_id = +(tl.split(" ").slice(1));
@@ -160,6 +165,19 @@ class PostSyncer extends LoggedEntity {
                 );
             }
 
+            // Need to specify a meta_description
+            if (title === null) {
+                this.logger.error(
+                    `No meta_description given in post: ${md_path}. Please place ` +
+                    `a @!meta_description tag at top of post file. (e.g. ` +
+                    `'@!meta_description "A post about <cool stuff> by <a dude>."')`
+                );
+                throw new InvalidPostHeadersError(
+                    "Missing a @!meta_description tag at beginning of post md file",
+                    md_path
+                );
+            }
+
         } catch (err) {
             this.logger.error(`Failed to preprocess md at ${md_path}: ${err}`);
         }
@@ -169,12 +187,13 @@ class PostSyncer extends LoggedEntity {
             author: author,
             title: title,
             parent_id: parent_id,
+            meta_description: meta_description,
             categories: categories
         };
     }
 
-    _get_header_string(author, title, parent_id, categories) {
-        let headers = { author, title };
+    _get_header_string(author, title, meta_description, parent_id, categories) {
+        let headers = { author, title, meta_description };
 
         if (parent_id !== null) headers.parent = parent_id;
         if (categories.length > 0) headers.categories = categories;
@@ -196,6 +215,7 @@ class PostSyncer extends LoggedEntity {
         let md = null;
         let author = null;
         let title = null;
+        let meta_description = null;
         let parent_id = null;
         let categories = [];
         try {
@@ -203,6 +223,7 @@ class PostSyncer extends LoggedEntity {
             md = post_info.post;
             author = post_info.author;
             title = post_info.title;
+            meta_description = post_info.meta_description;
             parent_id = post_info.parent_id;
             categories = post_info.categories;
         } catch (err) {
@@ -217,6 +238,7 @@ class PostSyncer extends LoggedEntity {
             updated_content: post_html,
             updated_author: author,
             updated_title: title,
+            updated_meta_description: meta_description
         }
 
         if (parent_id) {
@@ -242,6 +264,7 @@ class PostSyncer extends LoggedEntity {
         let md = null;
         let author = null;
         let title = null;
+        let meta_description = null;
         let parent_id = null;
         let categories = [];
         try {
@@ -249,6 +272,7 @@ class PostSyncer extends LoggedEntity {
             md = post_info.post;
             author = post_info.author;
             title = post_info.title;
+            meta_description = post_info.meta_description;
             parent_id = post_info.parent_id;
             categories = post_info.categories;
         } catch (err) {
@@ -263,6 +287,7 @@ class PostSyncer extends LoggedEntity {
             title: title,
             content: post_html,
             md_path: md_path,
+            meta_description: meta_description,
             parent_id: parent_id,
             categories: categories
         });
@@ -298,6 +323,7 @@ class PostSyncer extends LoggedEntity {
         let header_string = this._get_header_string(
             post.author,
             post.title,
+            post.meta_description,
             post.parent,
             categories.data
         );

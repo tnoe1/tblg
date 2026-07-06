@@ -71,11 +71,15 @@
         - [x] Make every item in `update_post` other than id and `md_path`
         truly optional.
 - [x] Update tests for posts and comments
+- [x] Add a meta-description column to posts table for SEO (e.g. "A guide by 
+      ML Engineer Thomas Noel on reducing latency during large language model 
+      inference.")
 - [ ] Views (html templates)
     - [x] Finish writing `load_home()` in ServiceInterface.js 
           (and `serve_home()` in RequestRouter.js)
     - [x] Figure out view template for posts
         - Posts will be `.md` files that get parsed into html
+    - [ ] Inject meta-description into html
     - [ ] Figure out site layout
         - [ ] Polish up home page
         - [ ] Add post links to home page
@@ -89,3 +93,6 @@
 - [ ] Put TLS (https) concern at infrastructure layer via NGINX
 - [ ] Dockerize
 - [ ] Deploy (AWS?)
+
+For future versions:
+- [ ] Add downgrade logic to data model definition

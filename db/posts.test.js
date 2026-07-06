@@ -224,6 +224,7 @@ describe("PostInterface", async (t) => {
             title: "My Favorite",
             content: "<strong>I love Susannah!!!</strong>",
             md_path: "views/posts/test/test1.md",
+            meta_description: "Engineer Thomas Noel is expressing his love for Susannah, his wife.",
             categories: ["Love", "Family"]
         });
 
@@ -242,6 +243,7 @@ describe("PostInterface", async (t) => {
             title: "My Other Favorite",
             content: "<em>I love Ivan too!!!</em>",
             md_path: "views/posts/test/test2.md",
+            meta_description: "Engineer Thomas Noel is expressing his love for Ivan, his son.",
             parent_id: init_post_id,
             categories: ["Love", "Family"]
         });
@@ -281,6 +283,7 @@ describe("PostInterface", async (t) => {
             title: "In Latin",
             content: "<em>ordo</em> amoris",
             md_path: "views/posts/test/test3.md",
+            meta_description: "Theologian Augustine of Hippo is expressing in Latin that loves should be deliberately ordered.",
             categories: ["Love", "Theology"]
         });
 
@@ -324,6 +327,7 @@ describe("PostInterface", async (t) => {
             title: "Excavators",
             content: "<strong>big big excavator move the dirt</strong>",
             md_path: "views/posts/test/test4.md",
+            meta_description: "Philosopher Ivan Noel is expressing what it means for an excavator to flourish.",
             categories: ["Construction", "Love"]
         });
 
@@ -362,6 +366,7 @@ describe("PostInterface", async (t) => {
             title: "In Latin", 
             content: "<em>ordo</em> amoris",
             md_path: "views/posts/test/test3.md",
+            meta_description: "Theologian Augustine of Hippo is expressing in Latin that loves should be deliberately ordered, emphasizing order.",
             categories: ["Love", "Theology"]
         });
 

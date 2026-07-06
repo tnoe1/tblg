@@ -233,6 +233,7 @@ describe("CommentInterface", async (t) => {
             author: "Thomas Noel",
             title: "My Favorite",
             content: "<strong>I love Susannah!!!</strong>",
+            meta_description: "Engineer Thomas Noel is expressing his love for his wife.",
             md_path: "views/posts/test/test1.md",
             categories: ["Love", "Family"]
         });
