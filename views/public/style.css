@@ -29,3 +29,13 @@
     grid-template-rows: 95% auto;
     outline: 3px solid yellow;
 }
+
+/* Progress!! TODO: Tune this to not use px units. */
+@media (min-width: 1250px) {
+    #page-container {
+        /* margin: 100px max(calc(100% - 1150px), 100px); */
+        width: 1050px;
+        justify-self: center;
+    }
+}
+
